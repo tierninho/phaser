@@ -10,12 +10,12 @@ var Utils = require('./Utils');
 
 /**
  * @classdesc
- * WebGLPipeline is a class that describes the way elements will be rendererd 
- * in WebGL, specially focused on batching vertices (batching is not provided). 
- * Pipelines are mostly used for describing 2D rendering passes but it's 
- * flexible enough to be used for any type of rendering including 3D. 
+ * WebGLPipeline is a class that describes the way elements will be rendererd
+ * in WebGL, specially focused on batching vertices (batching is not provided).
+ * Pipelines are mostly used for describing 2D rendering passes but it's
+ * flexible enough to be used for any type of rendering including 3D.
  * Internally WebGLPipeline will handle things like compiling shaders,
- * creating vertex buffers, assigning primitive topology and binding 
+ * creating vertex buffers, assigning primitive topology and binding
  * vertex attributes.
  *
  * The config properties are:
@@ -30,7 +30,7 @@ var Utils = require('./Utils');
  * - vertexSize: The size of a single vertex in bytes.
  * - vertices: An optional buffer of vertices
  * - attributes: An array describing the vertex attributes
- *  
+ *
  * The vertex attributes properties are:
  * - name : String - Name of the attribute in the vertex shader
  * - size : integer - How many components describe the attribute. For ex: vec3 = size of 3, float = size of 1
@@ -41,7 +41,7 @@ var Utils = require('./Utils');
  * - https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttribPointer
  *
  * @class WebGLPipeline
- * @memberOf Phaser.Renderer.WebGL
+ * @memberof Phaser.Renderer.WebGL
  * @constructor
  * @since 3.0.0
  *
@@ -240,7 +240,7 @@ var WebGLPipeline = new Class({
 
     /**
      * Called when the Game has fully booted and the Renderer has finished setting up.
-     * 
+     *
      * By this stage all Game level systems are now in place and you can perform any final
      * tasks that the pipeline may need that relied on game systems such as the Texture Manager.
      *
@@ -263,7 +263,7 @@ var WebGLPipeline = new Class({
      * @param {boolean} normalized - Is the value normalized to a range
      * @param {integer} offset - Byte offset to the beginning of the first element in the vertex
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     addAttribute: function (name, size, type, normalized, offset)
     {
@@ -301,12 +301,13 @@ var WebGLPipeline = new Class({
      * @param {number} height - [description]
      * @param {number} resolution - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     resize: function (width, height, resolution)
     {
         this.width = width * resolution;
         this.height = height * resolution;
+
         return this;
     },
 
@@ -316,7 +317,7 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#bind
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     bind: function ()
     {
@@ -355,7 +356,7 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#onBind
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     onBind: function ()
     {
@@ -369,7 +370,7 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#onPreRender
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     onPreRender: function ()
     {
@@ -386,7 +387,7 @@ var WebGLPipeline = new Class({
      * @param {Phaser.Scene} scene - [description]
      * @param {Phaser.Cameras.Scene2D.Camera} camera - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     onRender: function ()
     {
@@ -400,7 +401,7 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#onPostRender
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     onPostRender: function ()
     {
@@ -415,7 +416,7 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#flush
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     flush: function ()
     {
@@ -449,7 +450,7 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#destroy
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     destroy: function ()
     {
@@ -471,10 +472,10 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat1
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {number} x - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setFloat1: function (name, x)
     {
@@ -489,11 +490,11 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat2
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {number} x - [description]
      * @param {number} y - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setFloat2: function (name, x, y)
     {
@@ -508,12 +509,12 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat3
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {number} x - [description]
      * @param {number} y - [description]
      * @param {number} z - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setFloat3: function (name, x, y, z)
     {
@@ -528,13 +529,13 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat4
      * @since 3.2.0
      *
-     * @param {string} name - Name of the uniform
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {number} x - X component of the uniform
      * @param {number} y - Y component of the uniform
      * @param {number} z - Z component of the uniform
      * @param {number} w - W component of the uniform
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setFloat4: function (name, x, y, z, w)
     {
@@ -546,13 +547,85 @@ var WebGLPipeline = new Class({
     /**
      * Set a uniform value of the current pipeline program.
      *
+     * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat1v
+     * @since 3.13.0
+     *
+     * @param {string} name - The name of the uniform to look-up and modify.
+     * @param {Float32Array} arr - The new value to be used for the uniform variable.
+     *
+     * @return {this} This WebGLPipeline instance.
+     */
+    setFloat1v: function (name, arr)
+    {
+        this.renderer.setFloat1v(this.program, name, arr);
+
+        return this;
+    },
+
+    /**
+     * Set a uniform value of the current pipeline program.
+     *
+     * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat2v
+     * @since 3.13.0
+     *
+     * @param {string} name - The name of the uniform to look-up and modify.
+     * @param {Float32Array} arr - The new value to be used for the uniform variable.
+     *
+     * @return {this} This WebGLPipeline instance.
+     */
+    setFloat2v: function (name, arr)
+    {
+        this.renderer.setFloat2v(this.program, name, arr);
+
+        return this;
+    },
+
+    /**
+     * Set a uniform value of the current pipeline program.
+     *
+     * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat3v
+     * @since 3.13.0
+     *
+     * @param {string} name - The name of the uniform to look-up and modify.
+     * @param {Float32Array} arr - The new value to be used for the uniform variable.
+     *
+     * @return {this} This WebGLPipeline instance.
+     */
+    setFloat3v: function (name, arr)
+    {
+        this.renderer.setFloat3v(this.program, name, arr);
+
+        return this;
+    },
+
+    /**
+     * Set a uniform value of the current pipeline program.
+     *
+     * @method Phaser.Renderer.WebGL.WebGLPipeline#setFloat4v
+     * @since 3.13.0
+     *
+     * @param {string} name - The name of the uniform to look-up and modify.
+     * @param {Float32Array} arr - The new value to be used for the uniform variable.
+     *
+     * @return {this} This WebGLPipeline instance.
+     */
+    setFloat4v: function (name, arr)
+    {
+        this.renderer.setFloat4v(this.program, name, arr);
+
+        return this;
+    },
+
+    /**
+     * Set a uniform value of the current pipeline program.
+     *
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setInt1
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {integer} x - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setInt1: function (name, x)
     {
@@ -567,11 +640,11 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setInt2
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {integer} x - [description]
      * @param {integer} y - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setInt2: function (name, x, y)
     {
@@ -586,12 +659,12 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setInt3
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {integer} x - [description]
      * @param {integer} y - [description]
      * @param {integer} z - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setInt3: function (name, x, y, z)
     {
@@ -606,13 +679,13 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setInt4
      * @since 3.2.0
      *
-     * @param {string} name - Name of the uniform
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {integer} x - X component of the uniform
      * @param {integer} y - Y component of the uniform
      * @param {integer} z - Z component of the uniform
      * @param {integer} w - W component of the uniform
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setInt4: function (name, x, y, z, w)
     {
@@ -623,16 +696,15 @@ var WebGLPipeline = new Class({
 
     /**
      * Set a uniform value of the current pipeline program.
-     * [description]
      *
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setMatrix2
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {boolean} transpose - [description]
      * @param {Float32Array} matrix - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setMatrix2: function (name, transpose, matrix)
     {
@@ -643,17 +715,15 @@ var WebGLPipeline = new Class({
 
     /**
      * Set a uniform value of the current pipeline program.
-     * [description]
-     * [description]
      *
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setMatrix3
      * @since 3.2.0
      *
-     * @param {string} name - [description]
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {boolean} transpose - [description]
      * @param {Float32Array} matrix - [description]
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setMatrix3: function (name, transpose, matrix)
     {
@@ -668,11 +738,11 @@ var WebGLPipeline = new Class({
      * @method Phaser.Renderer.WebGL.WebGLPipeline#setMatrix4
      * @since 3.2.0
      *
-     * @param {string} name - Name of the uniform
+     * @param {string} name - The name of the uniform to look-up and modify.
      * @param {boolean} transpose - Should the matrix be transpose
      * @param {Float32Array} matrix - Matrix data
      *
-     * @return {Phaser.Renderer.WebGL.WebGLPipeline} [description]
+     * @return {this} This WebGLPipeline instance.
      */
     setMatrix4: function (name, transpose, matrix)
     {

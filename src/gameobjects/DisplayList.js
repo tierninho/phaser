@@ -19,7 +19,7 @@ var StableSort = require('../utils/array/StableSort');
  *
  * @class DisplayList
  * @extends Phaser.Structs.List.<Phaser.GameObjects.GameObject>
- * @memberOf Phaser.GameObjects
+ * @memberof Phaser.GameObjects
  * @constructor
  * @since 3.0.0
  *
@@ -199,7 +199,14 @@ var DisplayList = new Class({
      */
     shutdown: function ()
     {
-        this.removeAll();
+        var i = this.list.length;
+
+        while (i--)
+        {
+            this.list[i].destroy(true);
+        }
+
+        this.list.length = 0;
 
         this.systems.events.off('shutdown', this.shutdown, this);
     },

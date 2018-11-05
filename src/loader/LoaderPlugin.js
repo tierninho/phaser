@@ -41,7 +41,7 @@ var XHRSettings = require('./XHRSettings');
  *
  * @class LoaderPlugin
  * @extends Phaser.Events.EventEmitter
- * @memberOf Phaser.Loader
+ * @memberof Phaser.Loader
  * @constructor
  * @since 3.0.0
  *
@@ -300,7 +300,7 @@ var LoaderPlugin = new Class({
          *
          * @name Phaser.Loader.LoaderPlugin#state
          * @type {integer}
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.state = CONST.LOADER_IDLE;
@@ -827,6 +827,12 @@ var LoaderPlugin = new Class({
      */
     nextFile: function (file, success)
     {
+        //  Has the game been destroyed during load? If so, bail out now.
+        if (!this.inflight)
+        {
+            return;
+        }
+
         this.inflight.delete(file);
 
         this.updateProgress();
@@ -867,6 +873,12 @@ var LoaderPlugin = new Class({
      */
     fileProcessComplete: function (file)
     {
+        //  Has the game been destroyed during load? If so, bail out now.
+        if (!this.scene || !this.systems || !this.systems.game || this.systems.game.pendingDestroy)
+        {
+            return;
+        }
+
         //  This file has failed, so move it to the failed Set
         if (file.state === CONST.FILE_ERRORED)
         {

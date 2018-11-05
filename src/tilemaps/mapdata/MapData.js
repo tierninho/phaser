@@ -14,7 +14,7 @@ var GetFastValue = require('../../utils/object/GetFastValue');
  * itself.
  *
  * @class MapData
- * @memberOf Phaser.Tilemaps
+ * @memberof Phaser.Tilemaps
  * @constructor
  * @since 3.0.0
  *
@@ -108,6 +108,15 @@ var MapData = new Class({
          * @since 3.0.0
          */
         this.orientation = GetFastValue(config, 'orientation', 'orthogonal');
+
+        /**
+         * [description]
+         * 
+         * @name Phaser.Tilemaps.MapData#renderOrder
+         * @type {string}
+         * @since 3.12.0
+         */
+        this.renderOrder = GetFastValue(config, 'renderOrder', 'right-down');
 
         /**
          * [description]

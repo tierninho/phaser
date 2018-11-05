@@ -27,6 +27,7 @@ var SeparateY = require('./SeparateY');
 var Set = require('../../structs/Set');
 var StaticBody = require('./StaticBody');
 var TileIntersectsBody = require('./tilemap/TileIntersectsBody');
+var TransformMatrix = require('../../gameobjects/components/TransformMatrix');
 var Vector2 = require('../../math/Vector2');
 var Wrap = require('../../math/Wrap');
 
@@ -126,7 +127,7 @@ var Wrap = require('../../math/Wrap');
 
 /**
  * An Arcade Physics Collider Type.
- * 
+ *
  * @typedef {(
  * Phaser.GameObjects.GameObject|
  * Phaser.GameObjects.Group|
@@ -156,7 +157,7 @@ var Wrap = require('../../math/Wrap');
  *
  * @class World
  * @extends Phaser.Events.EventEmitter
- * @memberOf Phaser.Physics.Arcade
+ * @memberof Phaser.Physics.Arcade
  * @constructor
  * @since 3.0.0
  *
@@ -257,11 +258,11 @@ var World = new Class({
 
         /**
          * The number of physics steps to be taken per second.
-         * 
+         *
          * This property is read-only. Use the `setFPS` method to modify it at run-time.
          *
          * @name Phaser.Physics.Arcade.World#fps
-         * @readOnly
+         * @readonly
          * @type {number}
          * @default 60
          * @since 3.10.0
@@ -302,7 +303,7 @@ var World = new Class({
          * The number of steps that took place in the last frame.
          *
          * @name Phaser.Physics.Arcade.World#stepsLastFrame
-         * @readOnly
+         * @readonly
          * @type {number}
          * @since 3.10.0
          */
@@ -316,7 +317,7 @@ var World = new Class({
          * - 0.5 = double speed
          *
          * @name Phaser.Physics.Arcade.World#timeScale
-         * @property {number} 
+         * @property {number}
          * @default 1
          * @since 3.10.0
          */
@@ -416,7 +417,7 @@ var World = new Class({
 
         /**
          * The maximum number of items per node on the RTree.
-         * 
+         *
          * This is ignored if `useTree` is `false`. If you have a large number of bodies in
          * your world then you may find search performance improves by increasing this value,
          * to allow more items per node and less node division.
@@ -430,7 +431,7 @@ var World = new Class({
 
         /**
          * Should this Arcade Physics World use an RTree for Dynamic Physics bodies or not?
-         * 
+         *
          * An RTree is a fast way of spatially sorting of all the moving bodies in the world.
          * However, at certain limits, the cost of clearing and inserting the bodies into the
          * tree every frame becomes more expensive than the search speed gains it provides.
@@ -478,6 +479,26 @@ var World = new Class({
          */
         this.treeMinMax = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
+        /**
+         * A temporary Transform Matrix used by bodies for calculations without them needing their own local copy.
+         *
+         * @name Phaser.Physics.Arcade.World#_tempMatrix
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @private
+         * @since 3.12.0
+         */
+        this._tempMatrix = new TransformMatrix();
+
+        /**
+         * A temporary Transform Matrix used by bodies for calculations without them needing their own local copy.
+         *
+         * @name Phaser.Physics.Arcade.World#_tempMatrix2
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @private
+         * @since 3.12.0
+         */
+        this._tempMatrix2 = new TransformMatrix();
+
         if (this.drawDebug)
         {
             this.createDebugGraphic();
@@ -486,7 +507,7 @@ var World = new Class({
 
     /**
      * Adds an Arcade Physics Body to a Game Object, an array of Game Objects, or the children of a Group.
-     * 
+     *
      * The difference between this and the `enableBody` method is that you can pass arrays or Groups
      * to this method.
      *
@@ -612,7 +633,7 @@ var World = new Class({
      * @since 3.10.0
      *
      * @param {(Phaser.Physics.Arcade.Body|Phaser.Physics.Arcade.StaticBody)} body - The Body to be added to the simulation.
-     * 
+     *
      * @return {(Phaser.Physics.Arcade.Body|Phaser.Physics.Arcade.StaticBody)} The Body that was added to the simulation.
      */
     add: function (body)
@@ -635,10 +656,10 @@ var World = new Class({
 
     /**
      * Disables the Arcade Physics Body of a Game Object, an array of Game Objects, or the children of a Group.
-     * 
+     *
      * The difference between this and the `disableBody` method is that you can pass arrays or Groups
      * to this method.
-     * 
+     *
      * The body itself is not deleted, it just has its `enable` property set to false, which
      * means you can re-enable it again at any point by passing it to enable `World.enable` or `World.add`.
      *
@@ -673,13 +694,13 @@ var World = new Class({
                     }
                     else
                     {
-                        this.disableBody(child);
+                        this.disableBody(child.body);
                     }
                 }
             }
             else
             {
-                this.disableBody(entry);
+                this.disableBody(entry.body);
             }
         }
     },
@@ -1436,9 +1457,15 @@ var World = new Class({
             {
                 this.emit('overlap', body1.gameObject, body2.gameObject, body1, body2);
             }
-            else if (body1.onCollide || body2.onCollide)
+            else
             {
-                this.emit('collide', body1.gameObject, body2.gameObject, body1, body2);
+                body1.postUpdate();
+                body2.postUpdate();
+
+                if (body1.onCollide || body2.onCollide)
+                {
+                    this.emit('collide', body1.gameObject, body2.gameObject, body1, body2);
+                }
             }
         }
 
@@ -1638,6 +1665,10 @@ var World = new Class({
             this.emit('collide', body1.gameObject, body2.gameObject, body1, body2);
         }
 
+        //  sync changes back to the bodies
+        body1.postUpdate();
+        body2.postUpdate();
+
         return true;
     },
 
@@ -1717,11 +1748,11 @@ var World = new Class({
      * @method Phaser.Physics.Arcade.World#overlap
      * @since 3.0.0
      *
-     * @param {ArcadeColliderType} object1 - [description]
-     * @param {ArcadeColliderType} [object2] - [description]
-     * @param {ArcadePhysicsCallback} [overlapCallback] - [description]
-     * @param {ArcadePhysicsCallback} [processCallback] - [description]
-     * @param {*} [callbackContext] - [description]
+     * @param {ArcadeColliderType} object1 - The first object or array of objects to check.
+     * @param {ArcadeColliderType} [object2] - The second object or array of objects to check, or `undefined`.
+     * @param {ArcadePhysicsCallback} [overlapCallback] - An optional callback function that is called if the objects overlap.
+     * @param {ArcadePhysicsCallback} [processCallback] - An optional callback function that lets you perform additional checks against the two objects if they overlap. If this is set then `overlapCallback` will only be called if this callback returns `true`.
+     * @param {*} [callbackContext] - The context in which to run the callbacks.
      *
      * @return {boolean} True if at least one Game Object overlaps another.
      */
@@ -1739,7 +1770,7 @@ var World = new Class({
      * Game Objects, arrays of Game Objects, Physics Groups, arrays of Physics Groups or normal Groups.
      *
      * If you don't require separation then use {@link #overlap} instead.
-     * 
+     *
      * If two Groups or arrays are passed, each member of one will be tested against each member of the other.
      *
      * If one Group **only** is passed (as `object1`), each member of the Group will be collided against the other members.
@@ -1755,13 +1786,13 @@ var World = new Class({
      * @method Phaser.Physics.Arcade.World#collide
      * @since 3.0.0
      *
-     * @param {ArcadeColliderType} object1 - [description]
-     * @param {ArcadeColliderType} [object2] - [description]
-     * @param {ArcadePhysicsCallback} [collideCallback] - [description]
-     * @param {ArcadePhysicsCallback} [processCallback] - [description]
-     * @param {*} [callbackContext] - [description]
+     * @param {ArcadeColliderType} object1 - The first object or array of objects to check.
+     * @param {ArcadeColliderType} [object2] - The second object or array of objects to check, or `undefined`.
+     * @param {ArcadePhysicsCallback} [collideCallback] - An optional callback function that is called if the objects collide.
+     * @param {ArcadePhysicsCallback} [processCallback] - An optional callback function that lets you perform additional checks against the two objects if they collide. If this is set then `collideCallback` will only be called if this callback returns `true`.
+     * @param {*} [callbackContext] - The context in which to run the callbacks.
      *
-     * @return {boolean} True if any overlapping Game Objects were separated.
+     * @return {boolean} True if any overlapping Game Objects were separated, otherwise false.
      */
     collide: function (object1, object2, collideCallback, processCallback, callbackContext)
     {
@@ -1783,9 +1814,9 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
-     * @return {boolean} True if any overlapping objects were separated.
+     * @return {boolean} True if any objects overlap (with `overlapOnly`); or true if any overlapping objects were separated.
      */
     collideObjects: function (object1, object2, collideCallback, processCallback, callbackContext, overlapOnly)
     {
@@ -1853,9 +1884,9 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
-     * @return {boolean} [description]
+     * @return {boolean} True if any objects overlap (with `overlapOnly`); or true if any overlapping objects were separated.
      */
     collideHandler: function (object1, object2, collideCallback, processCallback, callbackContext, overlapOnly)
     {
@@ -1931,7 +1962,7 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
      * @return {boolean} [description]
      */
@@ -1966,7 +1997,7 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
      * @return {boolean} [description]
      */
@@ -2059,7 +2090,7 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
      * @return {boolean} [description]
      */
@@ -2101,7 +2132,7 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
      * @return {boolean} [description]
      */
@@ -2185,6 +2216,9 @@ var World = new Class({
                 {
                     sprite.emit('collide', body.gameObject, tile, body, null);
                 }
+
+                //  sync changes back to the body
+                body.postUpdate();
             }
         }
     },
@@ -2200,7 +2234,7 @@ var World = new Class({
      * @param {ArcadePhysicsCallback} collideCallback - [description]
      * @param {ArcadePhysicsCallback} processCallback - [description]
      * @param {*} callbackContext - [description]
-     * @param {boolean} overlapOnly - [description]
+     * @param {boolean} overlapOnly - Whether this is a collision or overlap check.
      *
      * @return {boolean} [description]
      */

@@ -5,9 +5,9 @@
  */
 
 var Class = require('../utils/Class');
+var Distance = require('../math/distance/DistanceBetween');
 var SmoothStepInterpolation = require('../math/interpolation/SmoothStepInterpolation');
 var Vector2 = require('../math/Vector2');
-
 
 /**
  * @classdesc
@@ -25,7 +25,7 @@ var Vector2 = require('../math/Vector2');
  * callbacks.
  *
  * @class Pointer
- * @memberOf Phaser.Input
+ * @memberof Phaser.Input
  * @constructor
  * @since 3.0.0
  *
@@ -52,7 +52,7 @@ var Pointer = new Class({
          *
          * @name Phaser.Input.Pointer#id
          * @type {integer}
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.id = id;
@@ -283,6 +283,16 @@ var Pointer = new Class({
          * @since 3.0.0
          */
         this.wasTouch = false;
+
+        /**
+         * Did this Pointer get cancelled by a touchcancel event?
+         *
+         * @name Phaser.Input.Pointer#wasCancelled
+         * @type {boolean}
+         * @default false
+         * @since 3.15.0
+         */
+        this.wasCancelled = false;
 
         /**
          * If the mouse is locked, the horizontal relative movement of the Pointer in pixels since last frame.
@@ -524,6 +534,7 @@ var Pointer = new Class({
         this.dirty = true;
 
         this.wasTouch = true;
+        this.wasCancelled = false;
     },
 
     /**
@@ -580,6 +591,35 @@ var Pointer = new Class({
         this.dirty = true;
 
         this.wasTouch = true;
+        this.wasCancelled = false;
+        
+        this.active = false;
+    },
+
+    /**
+     * Internal method to handle a Touch Cancel Event.
+     *
+     * @method Phaser.Input.Pointer#touchcancel
+     * @private
+     * @since 3.15.0
+     *
+     * @param {TouchEvent} event - The Touch Event to process.
+     */
+    touchcancel: function (event)
+    {
+        this.buttons = 0;
+
+        this.event = event;
+
+        this.primaryDown = false;
+
+        this.justUp = false;
+        this.isDown = false;
+
+        this.dirty = true;
+
+        this.wasTouch = true;
+        this.wasCancelled = true;
         
         this.active = false;
     },
@@ -660,6 +700,20 @@ var Pointer = new Class({
     forwardButtonDown: function ()
     {
         return (this.buttons & 16);
+    },
+
+    /**
+     * Returns the distance between the Pointer's current position and where it was
+     * first pressed down (the `downX` and `downY` properties)
+     *
+     * @method Phaser.Input.Pointer#getDistance
+     * @since 3.13.0
+     *
+     * @return {number} The distance the Pointer has moved since being pressed down.
+     */
+    getDistance: function ()
+    {
+        return Distance(this.downX, this.downY, this.x, this.y);
     },
 
     /**

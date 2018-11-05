@@ -66,7 +66,7 @@ var propertyMap = {
  * Style settings for a Text object.
  *
  * @class TextStyle
- * @memberOf Phaser.GameObjects.Text
+ * @memberof Phaser.GameObjects.Text
  * @constructor
  * @since 3.0.0
  *
@@ -322,7 +322,7 @@ var TextStyle = new Class({
         this._font;
 
         //  Set to defaults + user style
-        this.setStyle(style, false);
+        this.setStyle(style, false, true);
 
         var metrics = GetValue(style, 'metrics', false);
 
@@ -359,12 +359,14 @@ var TextStyle = new Class({
      *
      * @param {object} style - The style settings to set.
      * @param {boolean} [updateText=true] - Whether to update the text immediately.
+     * @param {boolean} [setDefaults=false] - Use the default values is not set, or the local values.
      *
      * @return {Phaser.GameObjects.Text} The parent Text object.
      */
-    setStyle: function (style, updateText)
+    setStyle: function (style, updateText, setDefaults)
     {
         if (updateText === undefined) { updateText = true; }
+        if (setDefaults === undefined) { setDefaults = false; }
 
         //  Avoid type mutation
         if (style && style.hasOwnProperty('fontSize') && typeof style.fontSize === 'number')
@@ -374,14 +376,16 @@ var TextStyle = new Class({
 
         for (var key in propertyMap)
         {
+            var value = (setDefaults) ? propertyMap[key][1] : this[key];
+
             if (key === 'wordWrapCallback' || key === 'wordWrapCallbackScope')
             {
                 // Callback & scope should be set without processing the values
-                this[key] = GetValue(style, propertyMap[key][0], propertyMap[key][1]);
+                this[key] = GetValue(style, propertyMap[key][0], value);
             }
             else
             {
-                this[key] = GetAdvancedValue(style, propertyMap[key][0], propertyMap[key][1]);
+                this[key] = GetAdvancedValue(style, propertyMap[key][0], value);
             }
         }
 
@@ -390,7 +394,7 @@ var TextStyle = new Class({
 
         if (font === null)
         {
-            this._font = [ this.fontStyle, this.fontSize, this.fontFamily ].join(' ');
+            this._font = [ this.fontStyle, this.fontSize, this.fontFamily ].join(' ').trim();
         }
         else
         {
@@ -491,7 +495,7 @@ var TextStyle = new Class({
     {
         if (recalculateMetrics)
         {
-            this._font = [ this.fontStyle, this.fontSize, this.fontFamily ].join(' ');
+            this._font = [ this.fontStyle, this.fontSize, this.fontFamily ].join(' ').trim();
 
             this.metrics = MeasureText(this);
         }
@@ -516,20 +520,27 @@ var TextStyle = new Class({
      */
     setFont: function (font)
     {
-        if (typeof font === 'string')
+        var fontFamily = font;
+        var fontSize = '';
+        var fontStyle = '';
+
+        if (typeof font !== 'string')
         {
-            this.fontFamily = font;
-            this.fontSize = '';
-            this.fontStyle = '';
-        }
-        else
-        {
-            this.fontFamily = GetValue(font, 'fontFamily', 'Courier');
-            this.fontSize = GetValue(font, 'fontSize', '16px');
-            this.fontStyle = GetValue(font, 'fontStyle', '');
+            fontFamily = GetValue(font, 'fontFamily', 'Courier');
+            fontSize = GetValue(font, 'fontSize', '16px');
+            fontStyle = GetValue(font, 'fontStyle', '');
         }
 
-        return this.update(true);
+        if (fontFamily !== this.fontFamily || fontSize !== this.fontSize || fontStyle !== this.fontStyle)
+        {
+            this.fontFamily = fontFamily;
+            this.fontSize = fontSize;
+            this.fontStyle = fontStyle;
+    
+            this.update(true);
+        }
+
+        return this.parent;
     },
 
     /**
@@ -544,9 +555,14 @@ var TextStyle = new Class({
      */
     setFontFamily: function (family)
     {
-        this.fontFamily = family;
+        if (this.fontFamily !== family)
+        {
+            this.fontFamily = family;
 
-        return this.update(true);
+            this.update(true);
+        }
+
+        return this.parent;
     },
 
     /**
@@ -561,9 +577,14 @@ var TextStyle = new Class({
      */
     setFontStyle: function (style)
     {
-        this.fontStyle = style;
+        if (this.fontStyle !== style)
+        {
+            this.fontStyle = style;
 
-        return this.update(true);
+            this.update(true);
+        }
+
+        return this.parent;
     },
 
     /**
@@ -583,9 +604,14 @@ var TextStyle = new Class({
             size = size.toString() + 'px';
         }
 
-        this.fontSize = size;
+        if (this.fontSize !== size)
+        {
+            this.fontSize = size;
 
-        return this.update(true);
+            this.update(true);
+        }
+
+        return this.parent;
     },
 
     /**
@@ -723,24 +749,31 @@ var TextStyle = new Class({
      */
     setStroke: function (color, thickness)
     {
-        if (color === undefined)
+        if (thickness === undefined) { thickness = this.strokeThickness; }
+
+        if (color === undefined && this.strokeThickness !== 0)
         {
             //  Reset the stroke to zero (disabling it)
             this.strokeThickness = 0;
-        }
-        else
-        {
-            if (thickness === undefined) { thickness = this.strokeThickness; }
 
+            this.update(true);
+        }
+        else if (this.stroke !== color || this.strokeThickness !== thickness)
+        {
             this.stroke = color;
             this.strokeThickness = thickness;
+
+            this.update(true);
         }
 
-        return this.update(true);
+        return this.parent;
     },
 
     /**
      * Set the shadow settings.
+     * 
+     * Calling this method always re-measures the parent Text object,
+     * so only call it when you actually change the shadow settings.
      *
      * @method Phaser.GameObjects.Text.TextStyle#setShadow
      * @since 3.0.0

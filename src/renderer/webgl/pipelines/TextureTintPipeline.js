@@ -31,7 +31,7 @@ var WebGLPipeline = require('../WebGLPipeline');
  *
  * @class TextureTintPipeline
  * @extends Phaser.Renderer.WebGL.WebGLPipeline
- * @memberOf Phaser.Renderer.WebGL.Pipelines
+ * @memberof Phaser.Renderer.WebGL.Pipelines
  * @constructor
  * @since 3.0.0
  *
@@ -120,6 +120,15 @@ var TextureTintPipeline = new Class({
          * @since 3.0.0
          */
         this.maxQuads = rendererConfig.batchSize;
+
+        /**
+         * Collection of batch information
+         *
+         * @name Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline#batches
+         * @type {array}
+         * @since 3.1.0
+         */
+        this.batches = [];
 
         /**
          * A temporary Transform Matrix, re-used internally during batching.
@@ -219,7 +228,7 @@ var TextureTintPipeline = new Class({
          * @private
          * @since 3.12.0
          */
-        this.currentFrame = null;
+        this.currentFrame = { u0: 0, v0: 0, u1: 1, v1: 1 };
 
         /**
          * Internal path quad cache.
@@ -229,7 +238,7 @@ var TextureTintPipeline = new Class({
          * @private
          * @since 3.12.0
          */
-        this.firstQuad = [ 0, 0, 0, 0 ];
+        this.firstQuad = [ 0, 0, 0, 0, 0 ];
 
         /**
          * Internal path quad cache.
@@ -239,7 +248,7 @@ var TextureTintPipeline = new Class({
          * @private
          * @since 3.12.0
          */
-        this.prevQuad = [ 0, 0, 0, 0 ];
+        this.prevQuad = [ 0, 0, 0, 0, 0 ];
 
         /**
          * Used internally for triangulating a polygon.
@@ -261,13 +270,18 @@ var TextureTintPipeline = new Class({
      * @method Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline#onBind
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline} This pipeline instance.
+     * @return {this} This WebGLPipeline instance.
      */
     onBind: function ()
     {
         WebGLPipeline.prototype.onBind.call(this);
 
         this.mvpUpdate();
+
+        if (this.batches.length === 0)
+        {
+            this.pushBatch();
+        }
 
         return this;
     },
@@ -282,7 +296,7 @@ var TextureTintPipeline = new Class({
      * @param {number} height - The new height.
      * @param {number} resolution - The resolution.
      *
-     * @return {Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline} This pipeline instance.
+     * @return {this} This WebGLPipeline instance.
      */
     resize: function (width, height, resolution)
     {
@@ -307,9 +321,63 @@ var TextureTintPipeline = new Class({
      */
     setTexture2D: function (texture, unit)
     {
-        this.renderer.setTexture2D(texture, unit);
+        if (!texture)
+        {
+            texture = this.renderer.blankTexture.glTexture;
+            unit = 0;
+        }
+
+        var batches = this.batches;
+
+        if (batches.length === 0)
+        {
+            this.pushBatch();
+        }
+
+        var batch = batches[batches.length - 1];
+
+        if (unit > 0)
+        {
+            if (batch.textures[unit - 1] &&
+                batch.textures[unit - 1] !== texture)
+            {
+                this.pushBatch();
+            }
+
+            batches[batches.length - 1].textures[unit - 1] = texture;
+        }
+        else
+        {
+            if (batch.texture !== null &&
+                batch.texture !== texture)
+            {
+                this.pushBatch();
+            }
+
+            batches[batches.length - 1].texture = texture;
+        }
 
         return this;
+    },
+
+    /**
+     * Creates a new batch object and pushes it to a batch array.
+     * The batch object contains information relevant to the current 
+     * vertex batch like the offset in the vertex buffer, vertex count and 
+     * the textures used by that batch.
+     *
+     * @method Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline#pushBatch
+     * @since 3.1.0
+     */
+    pushBatch: function ()
+    {
+        var batch = {
+            first: this.vertexCount,
+            texture: null,
+            textures: []
+        };
+
+        this.batches.push(batch);
     },
 
     /**
@@ -318,11 +386,14 @@ var TextureTintPipeline = new Class({
      * @method Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline#flush
      * @since 3.0.0
      *
-     * @return {Phaser.Renderer.WebGL.Pipelines.TextureTintPipeline} This pipeline instance.
+     * @return {this} This WebGLPipeline instance.
      */
     flush: function ()
     {
-        if (this.flushLocked) { return this; }
+        if (this.flushLocked)
+        {
+            return this;
+        }
 
         this.flushLocked = true;
 
@@ -332,18 +403,88 @@ var TextureTintPipeline = new Class({
         var vertexSize = this.vertexSize;
         var renderer = this.renderer;
 
-        if (vertexCount === 0)
+        var batches = this.batches;
+        var batchCount = batches.length;
+        var batchVertexCount = 0;
+        var batch = null;
+        var batchNext;
+        var textureIndex;
+        var nTexture;
+
+        if (batchCount === 0 || vertexCount === 0)
         {
             this.flushLocked = false;
-            return;
+
+            return this;
         }
 
-        renderer.setBlankTexture();
-
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.bytes.subarray(0, vertexCount * vertexSize));
-        gl.drawArrays(topology, 0, vertexCount);
+
+        for (var index = 0; index < batches.length - 1; index++)
+        {
+            batch = batches[index];
+            batchNext = batches[index + 1];
+
+            if (batch.textures.length > 0)
+            {
+                for (textureIndex = 0; textureIndex < batch.textures.length; ++textureIndex)
+                {
+                    nTexture = batch.textures[textureIndex];
+
+                    if (nTexture)
+                    {
+                        renderer.setTexture2D(nTexture, 1 + textureIndex);
+                    }
+                }
+
+                gl.activeTexture(gl.TEXTURE0);
+            }
+
+            batchVertexCount = batchNext.first - batch.first;
+
+            if (batch.texture === null || batchVertexCount <= 0)
+            {
+                continue;
+            }
+
+            renderer.setTexture2D(batch.texture, 0);
+
+            gl.drawArrays(topology, batch.first, batchVertexCount);
+        }
+
+        // Left over data
+        batch = batches[batches.length - 1];
+
+        if (batch.textures.length > 0)
+        {
+            for (textureIndex = 0; textureIndex < batch.textures.length; ++textureIndex)
+            {
+                nTexture = batch.textures[textureIndex];
+
+                if (nTexture)
+                {
+                    renderer.setTexture2D(nTexture, 1 + textureIndex);
+                }
+            }
+
+            gl.activeTexture(gl.TEXTURE0);
+        }
+
+        batchVertexCount = vertexCount - batch.first;
+
+        if (batch.texture && batchVertexCount > 0)
+        {
+            renderer.setTexture2D(batch.texture, 0);
+
+            gl.drawArrays(topology, batch.first, batchVertexCount);
+        }
 
         this.vertexCount = 0;
+
+        batches.length = 0;
+
+        this.pushBatch();
+
         this.flushLocked = false;
 
         return this;
@@ -376,8 +517,8 @@ var TextureTintPipeline = new Class({
         var v1 = frame.v1;
         var frameX = frame.x;
         var frameY = frame.y;
-        var frameWidth = frame.width;
-        var frameHeight = frame.height;
+        var frameWidth = frame.cutWidth;
+        var frameHeight = frame.cutHeight;
 
         var x = -sprite.displayOriginX + frameX;
         var y = -sprite.displayOriginY + frameY;
@@ -701,6 +842,7 @@ var TextureTintPipeline = new Class({
      * @param {number} vOffset - Vertical offset on texture coordinate.
      * @param {Phaser.Cameras.Scene2D.Camera} camera - Current used camera.
      * @param {Phaser.GameObjects.Components.TransformMatrix} parentTransformMatrix - Parent container.
+     * @param {boolean} [skipFlip=false] - Skip the renderTexture check.
      */
     batchTexture: function (
         gameObject,
@@ -717,7 +859,8 @@ var TextureTintPipeline = new Class({
         tintTL, tintTR, tintBL, tintBR, tintEffect,
         uOffset, vOffset,
         camera,
-        parentTransformMatrix)
+        parentTransformMatrix,
+        skipFlip)
     {
         this.renderer.setPipeline(this, gameObject);
 
@@ -732,9 +875,6 @@ var TextureTintPipeline = new Class({
 
         var width = srcWidth;
         var height = srcHeight;
-
-        // var x = -displayOriginX + frameX;
-        // var y = -displayOriginY + frameY;
 
         var x = -displayOriginX;
         var y = -displayOriginY;
@@ -775,7 +915,7 @@ var TextureTintPipeline = new Class({
         }
 
         //  Invert the flipY if this is a RenderTexture
-        flipY = flipY ^ (texture.isRenderTexture ? 1 : 0);
+        flipY = flipY ^ (!skipFlip && texture.isRenderTexture ? 1 : 0);
 
         if (flipX)
         {
@@ -788,13 +928,6 @@ var TextureTintPipeline = new Class({
             height *= -1;
             y += srcHeight;
         }
-
-        //  Do we need this? (doubt it)
-        // if (camera.roundPixels)
-        // {
-        //     x |= 0;
-        //     y |= 0;
-        // }
 
         var xw = x + width;
         var yh = y + height;
@@ -959,8 +1092,11 @@ var TextureTintPipeline = new Class({
 
         var calcMatrix = this._tempMatrix3;
 
-        //  Multiply and store result in calcMatrix
-        parentMatrix.multiply(currentMatrix, calcMatrix);
+        //  Multiply and store result in calcMatrix, only if the parentMatrix is set, otherwise we'll use whatever values are already in the calcMatrix
+        if (parentMatrix)
+        {
+            parentMatrix.multiply(currentMatrix, calcMatrix);
+        }
         
         var xw = x + width;
         var yh = y + height;
@@ -1009,8 +1145,11 @@ var TextureTintPipeline = new Class({
 
         var calcMatrix = this._tempMatrix3;
 
-        //  Multiply and store result in calcMatrix
-        parentMatrix.multiply(currentMatrix, calcMatrix);
+        //  Multiply and store result in calcMatrix, only if the parentMatrix is set, otherwise we'll use whatever values are already in the calcMatrix
+        if (parentMatrix)
+        {
+            parentMatrix.multiply(currentMatrix, calcMatrix);
+        }
         
         var tx0 = calcMatrix.getX(x0, y0);
         var ty0 = calcMatrix.getY(x0, y0);
@@ -1093,8 +1232,11 @@ var TextureTintPipeline = new Class({
 
         var calcMatrix = this._tempMatrix3;
 
-        //  Multiply and store result in calcMatrix
-        parentMatrix.multiply(currentMatrix, calcMatrix);
+        //  Multiply and store result in calcMatrix, only if the parentMatrix is set, otherwise we'll use whatever values are already in the calcMatrix
+        if (parentMatrix)
+        {
+            parentMatrix.multiply(currentMatrix, calcMatrix);
+        }
 
         var length = path.length;
         var polygonCache = this.polygonCache;
@@ -1171,6 +1313,10 @@ var TextureTintPipeline = new Class({
     {
         this.renderer.setPipeline(this);
 
+        //  Reset the closePath booleans
+        this.prevQuad[4] = 0;
+        this.firstQuad[4] = 0;
+
         var pathLength = path.length - 1;
 
         for (var pathIndex = 0; pathIndex < pathLength; pathIndex++)
@@ -1214,14 +1360,12 @@ var TextureTintPipeline = new Class({
 
         var calcMatrix = this._tempMatrix3;
 
-        //  Multiply and store result in calcMatrix
-        parentMatrix.multiply(currentMatrix, calcMatrix);
-
-        if (this.vertexCount + 6 > this.vertexCapacity)
+        //  Multiply and store result in calcMatrix, only if the parentMatrix is set, otherwise we'll use whatever values are already in the calcMatrix
+        if (parentMatrix)
         {
-            this.flush();
+            parentMatrix.multiply(currentMatrix, calcMatrix);
         }
-        
+
         var dx = bx - ax;
         var dy = by - ay;
 
@@ -1274,7 +1418,7 @@ var TextureTintPipeline = new Class({
         //  TL, BL, BR, TR
         this.batchQuad(tlX, tlY, blX, blY, brX, brY, trX, trY, u0, v0, u1, v1, tintTL, tintTR, tintBL, tintBR, tintEffect);
 
-        if (lineWidth <= 1)
+        if (lineWidth <= 2)
         {
             //  No point doing a linejoin if the line isn't thick enough
             return;
@@ -1283,22 +1427,23 @@ var TextureTintPipeline = new Class({
         var prev = this.prevQuad;
         var first = this.firstQuad;
 
-        if (index > 0)
+        if (index > 0 && prev[4])
         {
             this.batchQuad(tlX, tlY, blX, blY, prev[0], prev[1], prev[2], prev[3], u0, v0, u1, v1, tintTL, tintTR, tintBL, tintBR, tintEffect);
         }
         else
         {
-            first[0] = blX;
-            first[1] = blY;
-            first[2] = tlX;
-            first[3] = tlY;
+            first[0] = tlX;
+            first[1] = tlY;
+            first[2] = blX;
+            first[3] = blY;
+            first[4] = 1;
         }
 
-        if (closePath)
+        if (closePath && first[4])
         {
             //  Add a join for the final path segment
-            this.batchQuad(first[0], first[1], first[2], first[3], brX, brY, trX, trY, u0, v0, u1, v1, tintTL, tintTR, tintBL, tintBR, tintEffect);
+            this.batchQuad(brX, brY, trX, trY, first[0], first[1], first[2], first[3], u0, v0, u1, v1, tintTL, tintTR, tintBL, tintBR, tintEffect);
         }
         else
         {
@@ -1308,6 +1453,7 @@ var TextureTintPipeline = new Class({
             prev[1] = brY;
             prev[2] = trX;
             prev[3] = trY;
+            prev[4] = 1;
         }
     }
 

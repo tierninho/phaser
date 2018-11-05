@@ -20,7 +20,7 @@ var ImageRender = require('./ImageRender');
  *
  * @class Image
  * @extends Phaser.GameObjects.GameObject
- * @memberOf Phaser.GameObjects
+ * @memberof Phaser.GameObjects
  * @constructor
  * @since 3.0.0
  *
@@ -89,7 +89,7 @@ var Image = new Class({
         this.setPosition(x, y);
         this.setSizeToFrame();
         this.setOriginFromFrame();
-        this.initPipeline('TextureTintPipeline');
+        this.initPipeline();
     }
 
 });

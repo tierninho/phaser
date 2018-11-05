@@ -14,7 +14,7 @@ var TWEEN_CONST = require('./const');
  * [description]
  *
  * @class Tween
- * @memberOf Phaser.Tweens
+ * @memberof Phaser.Tweens
  * @constructor
  * @since 3.0.0
  *
@@ -327,12 +327,12 @@ var Tween = new Class({
     },
 
     /**
-     * [description]
+     * Checks if the Tween is currently active.
      *
      * @method Phaser.Tweens.Tween#isPlaying
      * @since 3.0.0
      *
-     * @return {boolean} [description]
+     * @return {boolean} `true` if the Tween is active, otherwise `false`.
      */
     isPlaying: function ()
     {
@@ -340,12 +340,12 @@ var Tween = new Class({
     },
 
     /**
-     * [description]
+     * Checks if the Tween is currently paused.
      *
      * @method Phaser.Tweens.Tween#isPaused
      * @since 3.0.0
      *
-     * @return {boolean} [description]
+     * @return {boolean} `true` if the Tween is paused, otherwise `false`.
      */
     isPaused: function ()
     {
@@ -723,7 +723,7 @@ var Tween = new Class({
     },
 
     /**
-     * [description]
+     * Resumes the playback of a previously paused Tween.
      *
      * @method Phaser.Tweens.Tween#resume
      * @since 3.0.0
@@ -899,6 +899,12 @@ var Tween = new Class({
 
         if (this.state !== TWEEN_CONST.REMOVED)
         {
+            if (this.state === TWEEN_CONST.PAUSED || this.state === TWEEN_CONST.PENDING_ADD)
+            {
+                this.parent._destroy.push(this);
+                this.parent._toProcess++;
+            }
+
             this.state = TWEEN_CONST.PENDING_REMOVE;
         }
     },
@@ -910,7 +916,7 @@ var Tween = new Class({
      * @since 3.0.0
      *
      * @param {number} timestamp - [description]
-     * @param {number} delta - [description]
+     * @param {number} delta - The delta time in ms since the last frame. This is a smoothed and capped value based on the FPS rate.
      *
      * @return {boolean} Returns `true` if this Tween has finished and should be removed from the Tween Manager, otherwise returns `false`.
      */

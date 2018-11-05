@@ -5,7 +5,7 @@
  */
 
 var Class = require('../utils/Class');
-var Components = require('./components');
+var ComponentsToJSON = require('./components/ToJSON');
 var DataManager = require('../data/DataManager');
 var EventEmitter = require('eventemitter3');
 
@@ -16,7 +16,7 @@ var EventEmitter = require('eventemitter3');
  * Instead, use them as the base for your own custom classes.
  *
  * @class GameObject
- * @memberOf Phaser.GameObjects
+ * @memberof Phaser.GameObjects
  * @extends Phaser.Events.EventEmitter
  * @constructor
  * @since 3.0.0
@@ -173,8 +173,6 @@ var GameObject = new Class({
 
         //  Tell the Scene to re-sort the children
         scene.sys.queueDepthSort();
-
-        scene.sys.events.once('shutdown', this.destroy, this);
     },
 
     /**
@@ -385,7 +383,9 @@ var GameObject = new Class({
     },
 
     /**
-     * If this Game Object has previously been enabled for input, this will remove it.
+     * If this Game Object has previously been enabled for input, this will queue it
+     * for removal, causing it to no longer be interactive. The removal happens on
+     * the next game step, it is not immediate.
      *
      * The Interactive Object that was assigned to this Game Object will be destroyed,
      * removed from the Input Manager and cleared from this Game Object.
@@ -396,6 +396,11 @@ var GameObject = new Class({
      * If you wish to only temporarily stop an object from receiving input then use
      * `disableInteractive` instead, as that toggles the interactive state, where-as
      * this erases it completely.
+     * 
+     * If you wish to resize a hit area, don't remove and then set it as being
+     * interactive. Instead, access the hitarea object directly and resize the shape
+     * being used. I.e.: `sprite.input.hitArea.setSize(width, height)` (assuming the
+     * shape is a Rectangle, which it is by default.)
      *
      * @method Phaser.GameObjects.GameObject#removeInteractive
      * @since 3.7.0
@@ -433,7 +438,7 @@ var GameObject = new Class({
      */
     toJSON: function ()
     {
-        return Components.ToJSON(this);
+        return ComponentsToJSON(this);
     },
 
     /**
@@ -511,10 +516,14 @@ var GameObject = new Class({
      *
      * @method Phaser.GameObjects.GameObject#destroy
      * @since 3.0.0
+     * 
+     * @param {boolean} [fromScene=false] - Is this Game Object being destroyed as the result of a Scene shutdown?
      */
-    destroy: function ()
+    destroy: function (fromScene)
     {
-        //  This Game Object had already been destroyed
+        if (fromScene === undefined) { fromScene = false; }
+
+        //  This Game Object has already been destroyed
         if (!this.scene || this.ignoreDestroy)
         {
             return;
@@ -529,8 +538,11 @@ var GameObject = new Class({
 
         var sys = this.scene.sys;
 
-        sys.displayList.remove(this);
-        sys.updateList.remove(this);
+        if (!fromScene)
+        {
+            sys.displayList.remove(this);
+            sys.updateList.remove(this);
+        }
 
         if (this.input)
         {
@@ -552,7 +564,10 @@ var GameObject = new Class({
         }
 
         //  Tell the Scene to re-sort the children
-        sys.queueDepthSort();
+        if (!fromScene)
+        {
+            sys.queueDepthSort();
+        }
 
         this.active = false;
         this.visible = false;
@@ -570,7 +585,7 @@ var GameObject = new Class({
  * The bitmask that `GameObject.renderFlags` is compared against to determine if the Game Object will render or not.
  *
  * @constant {integer} RENDER_MASK
- * @memberOf Phaser.GameObjects.GameObject
+ * @memberof Phaser.GameObjects.GameObject
  * @default
  */
 GameObject.RENDER_MASK = 15;

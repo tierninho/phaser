@@ -67,7 +67,7 @@ var Vector2 = require('../../math/Vector2');
  * to when they were added to the Camera class.
  *
  * @class BaseCamera
- * @memberOf Phaser.Cameras.Scene2D
+ * @memberof Phaser.Cameras.Scene2D
  * @constructor
  * @since 3.12.0
  * 
@@ -123,7 +123,7 @@ var BaseCamera = new Class({
          *
          * @name Phaser.Cameras.Scene2D.BaseCamera#config
          * @type {object}
-         * @readOnly
+         * @readonly
          * @since 3.12.0
          */
         this.config;
@@ -134,7 +134,7 @@ var BaseCamera = new Class({
          *
          * @name Phaser.Cameras.Scene2D.BaseCamera#id
          * @type {integer}
-         * @readOnly
+         * @readonly
          * @since 3.11.0
          */
         this.id = 0;
@@ -154,7 +154,7 @@ var BaseCamera = new Class({
          *
          * @name Phaser.Cameras.Scene2D.BaseCamera#resolution
          * @type {number}
-         * @readOnly
+         * @readonly
          * @since 3.12.0
          */
         this.resolution = 1;
@@ -179,7 +179,6 @@ var BaseCamera = new Class({
          * @type {boolean}
          * @default true
          * @since 3.10.0
-        this.visible = true;
          */
 
         /**
@@ -202,7 +201,7 @@ var BaseCamera = new Class({
          *
          * @name Phaser.Cameras.Scene2D.BaseCamera#worldView
          * @type {Phaser.Geom.Rectangle}
-         * @readOnly
+         * @readonly
          * @since 3.11.0
          */
         this.worldView = new Rectangle();
@@ -431,7 +430,6 @@ var BaseCamera = new Class({
          * @type {number}
          * @default 1
          * @since 3.11.0
-        this.alpha = 1;
          */
 
         /**
@@ -466,7 +464,7 @@ var BaseCamera = new Class({
          *
          * @name Phaser.Cameras.Scene2D.BaseCamera#midPoint
          * @type {Phaser.Math.Vector2}
-         * @readOnly
+         * @readonly
          * @since 3.11.0
          */
         this.midPoint = new Vector2(width / 2, height / 2);
@@ -527,14 +525,6 @@ var BaseCamera = new Class({
      * @param {number} [value=1] - The Camera alpha value.
      *
      * @return {this} This Camera instance.
-    setAlpha: function (value)
-    {
-        if (value === undefined) { value = 1; }
-
-        this.alpha = value;
-
-        return this;
-    },
      */
 
     /**
@@ -778,7 +768,7 @@ var BaseCamera = new Class({
         var mve = cameraMatrix[4];
         var mvf = cameraMatrix[5];
 
-        /* First Invert Matrix */
+        //  Invert Matrix
         var determinant = (mva * mvd) - (mvb * mvc);
 
         if (!determinant)
@@ -802,18 +792,18 @@ var BaseCamera = new Class({
         var s = Math.sin(this.rotation);
 
         var zoom = this.zoom;
+        var res = this.resolution;
 
         var scrollX = this.scrollX;
         var scrollY = this.scrollY;
 
-        var res = this.resolution;
+        //  Works for zoom of 1 with any resolution, but resolution > 1 and zoom !== 1 breaks
+        var sx = x + ((scrollX * c - scrollY * s) * zoom);
+        var sy = y + ((scrollX * s + scrollY * c) * zoom);
 
-        var sx = x * res + ((scrollX * c - scrollY * s) * zoom);
-        var sy = y * res + ((scrollX * s + scrollY * c) * zoom);
-
-        /* Apply transform to point */
-        output.x = (sx * ima + sy * imc + ime);
-        output.y = (sx * imb + sy * imd + imf);
+        //  Apply transform to point
+        output.x = (sx * ima + sy * imc) * res + ime;
+        output.y = (sx * imb + sy * imd) * res + imf;
 
         return output;
     },
@@ -1209,6 +1199,11 @@ var BaseCamera = new Class({
      */
     setScene: function (scene)
     {
+        if (this.scene && this._customViewport)
+        {
+            this.sceneManager.customViewports--;
+        }
+
         this.scene = scene;
 
         this.config = scene.sys.game.config;
@@ -1222,6 +1217,8 @@ var BaseCamera = new Class({
         this._cy = this._y * res;
         this._cw = this._width * res;
         this._ch = this._height * res;
+
+        this.updateSystem();
 
         return this;
     },
@@ -1349,12 +1346,6 @@ var BaseCamera = new Class({
      * @param {boolean} value - The visible state of the Camera.
      *
      * @return {this} This Camera instance.
-    setVisible: function (value)
-    {
-        this.visible = value;
-
-        return this;
-    },
      */
 
     /**
@@ -1423,22 +1414,7 @@ var BaseCamera = new Class({
             return;
         }
 
-        var custom = false;
-
-        if (this._x !== 0 || this._y !== 0)
-        {
-            custom = true;
-        }
-        else
-        {
-            var gameWidth = this.config.width;
-            var gameHeight = this.config.height;
-
-            if (gameWidth !== this._width || gameHeight !== this._height)
-            {
-                custom = true;
-            }
-        }
+        var custom = (this._x !== 0 || this._y !== 0 || this.config.width !== this._width || this.config.height !== this._height);
 
         var sceneManager = this.sceneManager;
 
@@ -1465,10 +1441,13 @@ var BaseCamera = new Class({
      */
 
     /**
-     * Destroys this Camera instance. You rarely need to call this directly.
-     *
-     * Called by the Camera Manager. If you wish to destroy a Camera please use `CameraManager.remove` as
-     * cameras are stored in a pool, ready for recycling later, and calling this directly will prevent that.
+     * Destroys this Camera instance and its internal properties and references.
+     * Once destroyed you cannot use this Camera again, even if re-added to a Camera Manager.
+     * 
+     * This method is called automatically by `CameraManager.remove` if that methods `runDestroy` argument is `true`, which is the default.
+     * 
+     * Unless you have a specific reason otherwise, always use `CameraManager.remove` and allow it to handle the camera destruction,
+     * rather than calling this method directly.
      *
      * @method Phaser.Cameras.Scene2D.BaseCamera#destroy
      * @fires CameraDestroyEvent
@@ -1725,7 +1704,7 @@ var BaseCamera = new Class({
      *
      * @name Phaser.Cameras.Scene2D.BaseCamera#centerX
      * @type {number}
-     * @readOnly
+     * @readonly
      * @since 3.10.0
      */
     centerX: {
@@ -1742,7 +1721,7 @@ var BaseCamera = new Class({
      *
      * @name Phaser.Cameras.Scene2D.BaseCamera#centerY
      * @type {number}
-     * @readOnly
+     * @readonly
      * @since 3.10.0
      */
     centerY: {
@@ -1765,7 +1744,7 @@ var BaseCamera = new Class({
      *
      * @name Phaser.Cameras.Scene2D.BaseCamera#displayWidth
      * @type {number}
-     * @readOnly
+     * @readonly
      * @since 3.11.0
      */
     displayWidth: {
@@ -1788,7 +1767,7 @@ var BaseCamera = new Class({
      *
      * @name Phaser.Cameras.Scene2D.BaseCamera#displayHeight
      * @type {number}
-     * @readOnly
+     * @readonly
      * @since 3.11.0
      */
     displayHeight: {

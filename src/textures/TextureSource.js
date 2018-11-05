@@ -17,7 +17,7 @@ var ScaleModes = require('../renderer/ScaleModes');
  * A Texture can contain multiple Texture Sources, which only happens when a multi-atlas is loaded.
  *
  * @class TextureSource
- * @memberOf Phaser.Textures
+ * @memberof Phaser.Textures
  * @constructor
  * @since 3.0.0
  *
@@ -234,7 +234,20 @@ var TextureSource = new Class({
     {
         if (this.renderer.gl && this.isCanvas)
         {
-            this.renderer.canvasToTexture(this.image, this.glTexture);
+            this.glTexture = this.renderer.canvasToTexture(this.image, this.glTexture);
+
+            //  Update all the Frames using this TextureSource
+
+            /*
+            var index = this.texture.getTextureSourceIndex(this);
+            
+            var frames = this.texture.getFramesFromTextureSource(index, true);
+
+            for (var i = 0; i < frames.length; i++)
+            {
+                frames[i].glTexture = this.glTexture;
+            }
+            */
         }
     },
 

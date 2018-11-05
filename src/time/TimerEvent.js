@@ -26,7 +26,7 @@ var GetFastValue = require('../utils/object/GetFastValue');
  * [description]
  *
  * @class TimerEvent
- * @memberOf Phaser.Time
+ * @memberof Phaser.Time
  * @constructor
  * @since 3.0.0
  *
@@ -44,7 +44,7 @@ var TimerEvent = new Class({
          * @name Phaser.Time.TimerEvent#delay
          * @type {number}
          * @default 0
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.delay = 0;
@@ -55,7 +55,7 @@ var TimerEvent = new Class({
          * @name Phaser.Time.TimerEvent#repeat
          * @type {number}
          * @default 0
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.repeat = 0;
@@ -76,7 +76,7 @@ var TimerEvent = new Class({
          * @name Phaser.Time.TimerEvent#loop
          * @type {boolean}
          * @default false
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.loop = false;

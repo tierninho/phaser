@@ -33,7 +33,7 @@ var Texture = require('./Texture');
  *
  * @class TextureManager
  * @extends Phaser.Events.EventEmitter
- * @memberOf Phaser.Textures
+ * @memberof Phaser.Textures
  * @constructor
  * @since 3.0.0
  *
@@ -926,23 +926,21 @@ var TextureManager = new Class({
 
         if (textureFrame)
         {
-            var source = textureFrame.source.image;
+            //  Adjust for trim (if not trimmed x and y are just zero)
+            x -= textureFrame.x;
+            y -= textureFrame.y;
 
-            if (x >= 0 && x <= source.width && y >= 0 && y <= source.height)
+            var data = textureFrame.data.cut;
+
+            x += data.x;
+            y += data.y;
+
+            if (x >= data.x && x < data.r && y >= data.y && y < data.b)
             {
-                x += textureFrame.cutX;
-                y += textureFrame.cutY;
-
-                // if (textureFrame.trimmed)
-                // {
-                //     x -= this.sprite.texture.trim.x;
-                //     y -= this.sprite.texture.trim.y;
-                // }
-
                 var ctx = this._tempContext;
 
                 ctx.clearRect(0, 0, 1, 1);
-                ctx.drawImage(source, x, y, 1, 1, 0, 0, 1, 1);
+                ctx.drawImage(textureFrame.source.image, x, y, 1, 1, 0, 0, 1, 1);
 
                 var rgb = ctx.getImageData(0, 0, 1, 1);
 
@@ -974,20 +972,24 @@ var TextureManager = new Class({
 
         if (textureFrame)
         {
-            var source = textureFrame.source.image;
+            //  Adjust for trim (if not trimmed x and y are just zero)
+            x -= textureFrame.x;
+            y -= textureFrame.y;
 
-            if (x >= 0 && x <= source.width && y >= 0 && y <= source.height)
+            var data = textureFrame.data.cut;
+
+            x += data.x;
+            y += data.y;
+
+            if (x >= data.x && x < data.r && y >= data.y && y < data.b)
             {
-                x += textureFrame.cutX;
-                y += textureFrame.cutY;
-
                 var ctx = this._tempContext;
 
                 ctx.clearRect(0, 0, 1, 1);
-                ctx.drawImage(source, x, y, 1, 1, 0, 0, 1, 1);
-
+                ctx.drawImage(textureFrame.source.image, x, y, 1, 1, 0, 0, 1, 1);
+    
                 var rgb = ctx.getImageData(0, 0, 1, 1);
-
+    
                 return rgb.data[3];
             }
         }

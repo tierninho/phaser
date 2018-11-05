@@ -15,7 +15,7 @@ var MeshRender = require('./MeshRender');
  *
  * @class Mesh
  * @extends Phaser.GameObjects.GameObject
- * @memberOf Phaser.GameObjects
+ * @memberof Phaser.GameObjects
  * @constructor
  * @webglOnly
  * @since 3.0.0
@@ -158,7 +158,7 @@ var Mesh = new Class({
         this.setPosition(x, y);
         this.setSizeToFrame();
         this.setOrigin();
-        this.initPipeline('TextureTintPipeline');
+        this.initPipeline();
     }
 
 });

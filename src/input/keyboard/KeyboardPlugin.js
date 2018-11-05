@@ -51,7 +51,7 @@ var SnapFloor = require('../../math/snap/SnapFloor');
  *
  * @class KeyboardPlugin
  * @extends Phaser.Events.EventEmitter
- * @memberOf Phaser.Input.Keyboard
+ * @memberof Phaser.Input.Keyboard
  * @constructor
  * @since 3.10.0
  *
@@ -276,7 +276,8 @@ var KeyboardPlugin = new Class({
 
     /**
      * @typedef {object} CursorKeys
-     *
+     * @memberof Phaser.Input.Keyboard
+     * 
      * @property {Phaser.Input.Keyboard.Key} [up] - A Key object mapping to the UP arrow key.
      * @property {Phaser.Input.Keyboard.Key} [down] - A Key object mapping to the DOWN arrow key.
      * @property {Phaser.Input.Keyboard.Key} [left] - A Key object mapping to the LEFT arrow key.
@@ -343,7 +344,12 @@ var KeyboardPlugin = new Class({
 
             for (var i = 0; i < keys.length; i++)
             {
-                output[keys[i]] = this.addKey(keys[i]);
+                var currentKey = keys[i].trim();
+
+                if (currentKey)
+                {
+                    output[currentKey] = this.addKey(currentKey);
+                }
             }
         }
         else
@@ -450,11 +456,11 @@ var KeyboardPlugin = new Class({
      * An array of either integers (key codes) or strings, or a mixture of both
      * An array of objects (such as Key objects) with a public 'keyCode' property
      *
-     * For example, to listen for the Konami code (up, up, up, down, down, down, left, left, left, right, right, right)
+     * For example, to listen for the Konami code (up, up, down, down, left, right, left, right, b, a, enter)
      * you could pass the following array of key codes:
      *
      * ```javascript
-     * this.input.keyboard.createCombo([ 38, 38, 38, 40, 40, 40, 37, 37, 37, 39, 39, 39 ], { resetOnMatch: true });
+     * this.input.keyboard.createCombo([ 38, 38, 40, 40, 37, 39, 37, 39, 66, 65, 13 ], { resetOnMatch: true });
      *
      * this.input.keyboard.on('keycombomatch', function (event) {
      *     console.log('Konami Code entered!');
@@ -578,8 +584,38 @@ var KeyboardPlugin = new Class({
     },
 
     /**
-     * Shuts the Keyboard Plugin down.
-     * All this does is remove any listeners bound to it.
+     * Resets all Key objects created by _this_ Keyboard Plugin back to their default un-pressed states.
+     * This can only reset keys created via the `addKey`, `addKeys` or `createCursors` methods.
+     * If you have created a Key object directly you'll need to reset it yourself.
+     * 
+     * This method is called automatically when the Keyboard Plugin shuts down, but can be
+     * invoked directly at any time you require.
+     *
+     * @method Phaser.Input.Keyboard.KeyboardPlugin#resetKeys
+     * @since 3.15.0
+     */
+    resetKeys: function ()
+    {
+        var keys = this.keys;
+
+        for (var i = 0; i < keys.length; i++)
+        {
+            //  Because it's a sparsely populated array
+            if (keys[i])
+            {
+                keys[i].reset();
+            }
+        }
+
+        return this;
+    },
+
+    /**
+     * Shuts this Keyboard Plugin down. This performs the following tasks:
+     * 
+     * 1 - Resets all keys created by this Keyboard plugin.
+     * 2 - Stops and removes the keyboard event listeners.
+     * 3 - Clears out any pending requests in the queue, without processing them.
      *
      * @method Phaser.Input.Keyboard.KeyboardPlugin#shutdown
      * @private
@@ -587,9 +623,13 @@ var KeyboardPlugin = new Class({
      */
     shutdown: function ()
     {
+        this.resetKeys();
+
         this.stopListeners();
 
         this.removeAllListeners();
+
+        this.queue = [];
     },
 
     /**

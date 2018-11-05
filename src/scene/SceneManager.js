@@ -20,7 +20,7 @@ var Systems = require('./Systems');
  *
  *
  * @class SceneManager
- * @memberOf Phaser.Scenes
+ * @memberof Phaser.Scenes
  * @constructor
  * @since 3.0.0
  *
@@ -106,7 +106,7 @@ var SceneManager = new Class({
          * @name Phaser.Scenes.SceneManager#isProcessing
          * @type {boolean}
          * @default false
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.isProcessing = false;
@@ -117,7 +117,7 @@ var SceneManager = new Class({
          * @name Phaser.Scenes.SceneManager#isBooted
          * @type {boolean}
          * @default false
-         * @readOnly
+         * @readonly
          * @since 3.4.0
          */
         this.isBooted = false;
@@ -1102,29 +1102,40 @@ var SceneManager = new Class({
 
         if (scene)
         {
-            scene.sys.start(data);
-
-            var loader;
-
-            if (scene.sys.load)
+            //  If the Scene is already running (perhaps they called start from a launched sub-Scene?)
+            //  then we close it down before starting it again.
+            if (scene.sys.isActive() || scene.sys.isPaused())
             {
-                loader = scene.sys.load;
+                scene.sys.shutdown();
+
+                scene.sys.start(data);
             }
-
-            //  Files payload?
-            if (loader && scene.sys.settings.hasOwnProperty('pack'))
+            else
             {
-                loader.reset();
+                scene.sys.start(data);
 
-                if (loader.addPack({ payload: scene.sys.settings.pack }))
+                var loader;
+    
+                if (scene.sys.load)
                 {
-                    scene.sys.settings.status = CONST.LOADING;
-
-                    loader.once('complete', this.payloadComplete, this);
-
-                    loader.start();
-
-                    return this;
+                    loader = scene.sys.load;
+                }
+    
+                //  Files payload?
+                if (loader && scene.sys.settings.hasOwnProperty('pack'))
+                {
+                    loader.reset();
+    
+                    if (loader.addPack({ payload: scene.sys.settings.pack }))
+                    {
+                        scene.sys.settings.status = CONST.LOADING;
+    
+                        loader.once('complete', this.payloadComplete, this);
+    
+                        loader.start();
+    
+                        return this;
+                    }
                 }
             }
 

@@ -23,7 +23,7 @@ var SpriteRender = require('./SpriteRender');
  *
  * @class Sprite
  * @extends Phaser.GameObjects.GameObject
- * @memberOf Phaser.GameObjects
+ * @memberof Phaser.GameObjects
  * @constructor
  * @since 3.0.0
  *
@@ -101,7 +101,7 @@ var Sprite = new Class({
         this.setPosition(x, y);
         this.setSizeToFrame();
         this.setOriginFromFrame();
-        this.initPipeline('TextureTintPipeline');
+        this.initPipeline();
     },
 
     /**
@@ -153,6 +153,20 @@ var Sprite = new Class({
         //  Extra Sprite data is added here
 
         return data;
+    },
+
+    /**
+     * Handles the pre-destroy step for the Sprite, which removes the Animation component.
+     *
+     * @method Phaser.GameObjects.Sprite#preDestroy
+     * @private
+     * @since 3.14.0
+     */
+    preDestroy: function ()
+    {
+        this.anims.destroy();
+
+        this.anims = undefined;
     }
 
 });

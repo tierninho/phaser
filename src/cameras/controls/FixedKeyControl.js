@@ -33,7 +33,7 @@ var GetValue = require('../../utils/object/GetValue');
  * [description]
  *
  * @class FixedKeyControl
- * @memberOf Phaser.Cameras.Controls
+ * @memberof Phaser.Cameras.Controls
  * @constructor
  * @since 3.0.0
  *
@@ -232,7 +232,7 @@ var FixedKeyControl = new Class({
      * @method Phaser.Cameras.Controls.FixedKeyControl#update
      * @since 3.0.0
      *
-     * @param {number} delta - [description]
+     * @param {number} delta - The delta time in ms since the last frame. This is a smoothed and capped value based on the FPS rate.
      */
     update: function (delta)
     {

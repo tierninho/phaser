@@ -17,10 +17,14 @@ var UUID = require('../../utils/string/UUID');
 /**
  * @classdesc
  * A Render Texture.
+ * 
+ * A Render Texture is a special texture that allows any number of Game Objects to be drawn to it. You can take many complex objects and
+ * draw them all to this one texture, which can they be used as the texture for other Game Object's. It's a way to generate dynamic
+ * textures at run-time that are WebGL friendly and don't invoke expensive GPU uploads.
  *
  * @class RenderTexture
  * @extends Phaser.GameObjects.GameObject
- * @memberOf Phaser.GameObjects
+ * @memberof Phaser.GameObjects
  * @constructor
  * @since 3.2.0
  *
@@ -156,11 +160,33 @@ var RenderTexture = new Class({
          */
         this._crop = this.resetCropObject();
 
-        //  Create a Texture for this Text object
+        /**
+         * The Texture corresponding to this Render Texture.
+         *
+         * @name Phaser.GameObjects.RenderTexture#texture
+         * @type {Phaser.Textures.Texture}
+         * @since 3.12.0
+         */
         this.texture = scene.sys.textures.addCanvas(UUID(), this.canvas);
 
-        //  Get the frame
+        /**
+         * The Frame corresponding to this Render Texture.
+         *
+         * @name Phaser.GameObjects.RenderTexture#frame
+         * @type {Phaser.Textures.Frame}
+         * @since 3.12.0
+         */
         this.frame = this.texture.get();
+        
+        /**
+         * Internal saved texture flag.
+         *
+         * @name Phaser.GameObjects.RenderTexture#_saved
+         * @type {boolean}
+         * @private
+         * @since 3.12.0
+         */
+        this._saved = false;
 
         /**
          * An internal Camera that can be used to move around the Render Texture.
@@ -183,7 +209,7 @@ var RenderTexture = new Class({
         this.dirty = false;
 
         /**
-         * [description]
+         * A reference to the WebGL Rendering Context.
          *
          * @name Phaser.GameObjects.RenderTexture#gl
          * @type {WebGLRenderingContext}
@@ -212,7 +238,7 @@ var RenderTexture = new Class({
         this.setPosition(x, y);
         this.setSize(width, height);
         this.setOrigin(0, 0);
-        this.initPipeline('TextureTintPipeline');
+        this.initPipeline();
     },
 
     /**
@@ -254,12 +280,10 @@ var RenderTexture = new Class({
 
         if (width !== this.width || height !== this.height)
         {
-            if (this.canvas)
-            {
-                this.canvas.width = width;
-                this.canvas.height = height;
-            }
-            else
+            this.canvas.width = width;
+            this.canvas.height = height;
+
+            if (this.gl)
             {
                 var gl = this.gl;
 
@@ -267,12 +291,16 @@ var RenderTexture = new Class({
                 this.renderer.deleteFramebuffer(this.framebuffer);
 
                 this.frame.source.glTexture = this.renderer.createTexture2D(0, gl.NEAREST, gl.NEAREST, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE, gl.RGBA, null, width, height, false);
-                this.framebuffer = this.renderer.createFramebuffer(width, height, this.texture, false);
+                this.framebuffer = this.renderer.createFramebuffer(width, height, this.frame.source.glTexture, false);
 
                 this.frame.glTexture = this.frame.source.glTexture;
             }
 
+            this.frame.source.width = width;
+            this.frame.source.height = height;
+
             this.camera.setSize(width, height);
+
             this.frame.setSize(width, height);
 
             this.width = width;
@@ -350,6 +378,8 @@ var RenderTexture = new Class({
     saveTexture: function (key)
     {
         this.textureManager.renameTexture(this.texture.key, key);
+        
+        this._saved = true;
 
         return this.texture;
     },
@@ -825,17 +855,17 @@ var RenderTexture = new Class({
      */
     preDestroy: function ()
     {
-        if (this.canvas)
+        if (!this._saved)
         {
             CanvasPool.remove(this.canvas);
-        }
 
-        if (this.gl)
-        {
-            this.renderer.deleteFramebuffer(this.framebuffer);
-        }
+            if (this.gl)
+            {
+                this.renderer.deleteFramebuffer(this.framebuffer);
+            }
 
-        this.texture.destroy();
+            this.texture.destroy();
+        }
     }
 
 });

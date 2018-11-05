@@ -10,20 +10,22 @@ var CONST = require('../../const');
 var GameObject = require('../../gameobjects/GameObject');
 var StaticTilemapLayerRender = require('./StaticTilemapLayerRender');
 var TilemapComponents = require('../components');
+var TransformMatrix = require('../../gameobjects/components/TransformMatrix');
 var Utils = require('../../renderer/webgl/Utils');
 
 /**
  * @classdesc
- * A StaticTilemapLayer is a game object that renders LayerData from a Tilemap. A
- * StaticTilemapLayer can only render tiles from a single tileset.
+ * A Static Tilemap Layer is a Game Object that renders LayerData from a Tilemap when used in combination
+ * with one, or more, Tilesets.
  *
- * A StaticTilemapLayer is optimized for speed over flexibility. You cannot apply per-tile
- * effects like tint or alpha. You cannot change the tiles in a StaticTilemapLayer. Use this
- * over a DynamicTilemapLayer when you don't need either of those features.
+ * A Static Tilemap Layer is optimized for rendering speed over flexibility. You cannot apply per-tile
+ * effects like tint or alpha, or change the tiles or tilesets the layer uses.
+ * 
+ * Use a Static Tilemap Layer instead of a Dynamic Tilemap Layer when you don't need tile manipulation features.
  *
  * @class StaticTilemapLayer
  * @extends Phaser.GameObjects.GameObject
- * @memberOf Phaser.Tilemaps
+ * @memberof Phaser.Tilemaps
  * @constructor
  * @since 3.0.0
  *
@@ -40,10 +42,10 @@ var Utils = require('../../renderer/webgl/Utils');
  * @extends Phaser.GameObjects.Components.Visible
  * @extends Phaser.GameObjects.Components.ScrollFactor
  *
- * @param {Phaser.Scene} scene - [description]
+ * @param {Phaser.Scene} scene - The Scene to which this Game Object belongs.
  * @param {Phaser.Tilemaps.Tilemap} tilemap - The Tilemap this layer is a part of.
  * @param {integer} layerIndex - The index of the LayerData associated with this layer.
- * @param {Phaser.Tilemaps.Tileset} tileset - The tileset used to render the tiles in this layer.
+ * @param {(string|string[]|Phaser.Tilemaps.Tileset|Phaser.Tilemaps.Tileset[])} tileset - The tileset, or an array of tilesets, used to render this layer. Can be a string or a Tileset object.
  * @param {number} [x=0] - The world x position where the top left of this layer will be placed.
  * @param {number} [y=0] - The world y position where the top left of this layer will be placed.
  */
@@ -78,7 +80,7 @@ var StaticTilemapLayer = new Class({
          *
          * @name Phaser.Tilemaps.StaticTilemapLayer#isTilemap
          * @type {boolean}
-         * @readOnly
+         * @readonly
          * @since 3.0.0
          */
         this.isTilemap = true;
@@ -111,16 +113,19 @@ var StaticTilemapLayer = new Class({
          */
         this.layer = tilemap.layers[layerIndex];
 
-        this.layer.tilemapLayer = this; // Link the LayerData with this static tilemap layer
+        // Link the LayerData with this static tilemap layer
+        this.layer.tilemapLayer = this;
 
         /**
-         * The Tileset associated with this layer. A tilemap layer can only render from one Tileset.
+         * The Tileset/s associated with this layer.
+         * 
+         * As of Phaser 3.14 this property is now an array of Tileset objects, previously it was a single reference.
          *
          * @name Phaser.Tilemaps.StaticTilemapLayer#tileset
-         * @type {Phaser.Tilemaps.Tileset}
+         * @type {Phaser.Tilemaps.Tileset[]}
          * @since 3.0.0
          */
-        this.tileset = tileset;
+        this.tileset = [];
 
         /**
          * Used internally by the Canvas renderer.
@@ -156,7 +161,7 @@ var StaticTilemapLayer = new Class({
          *
          * @name Phaser.Tilemaps.StaticTilemapLayer#tilesDrawn
          * @type {integer}
-         * @readOnly
+         * @readonly
          * @since 3.12.0
          */
         this.tilesDrawn = 0;
@@ -168,7 +173,7 @@ var StaticTilemapLayer = new Class({
          *
          * @name Phaser.Tilemaps.StaticTilemapLayer#tilesTotal
          * @type {integer}
-         * @readOnly
+         * @readonly
          * @since 3.12.0
          */
         this.tilesTotal = this.layer.width * this.layer.height;
@@ -223,14 +228,8 @@ var StaticTilemapLayer = new Class({
         this.cullCallback = TilemapComponents.CullTiles;
 
         /**
-         * @name Phaser.Tilemaps.StaticTilemapLayer#vertexBuffer
-         * @type {array}
-         * @private
-         * @since 3.0.0
-         */
-        this.vertexBuffer = null;
-
-        /**
+         * A reference to the renderer.
+         * 
          * @name Phaser.Tilemaps.StaticTilemapLayer#renderer
          * @type {(Phaser.Renderer.Canvas.CanvasRenderer|Phaser.Renderer.WebGL.WebGLRenderer)}
          * @private
@@ -239,49 +238,126 @@ var StaticTilemapLayer = new Class({
         this.renderer = scene.sys.game.renderer;
 
         /**
+         * An array of vertex buffer objects, used by the WebGL renderer.
+         * 
+         * As of Phaser 3.14 this property is now an array, where each element maps to a Tileset instance. Previously it was a single instance.
+         * 
+         * @name Phaser.Tilemaps.StaticTilemapLayer#vertexBuffer
+         * @type {WebGLBuffer[]}
+         * @private
+         * @since 3.0.0
+         */
+        this.vertexBuffer = [];
+
+        /**
+         * An array of ArrayBuffer objects, used by the WebGL renderer.
+         * 
+         * As of Phaser 3.14 this property is now an array, where each element maps to a Tileset instance. Previously it was a single instance.
+         * 
          * @name Phaser.Tilemaps.StaticTilemapLayer#bufferData
-         * @type {ArrayBuffer}
+         * @type {ArrayBuffer[]}
          * @private
          * @since 3.0.0
          */
-        this.bufferData = null;
+        this.bufferData = [];
 
         /**
+         * An array of Float32 Array objects, used by the WebGL renderer.
+         * 
+         * As of Phaser 3.14 this property is now an array, where each element maps to a Tileset instance. Previously it was a single instance.
+         * 
          * @name Phaser.Tilemaps.StaticTilemapLayer#vertexViewF32
-         * @type {Float32Array}
+         * @type {Float32Array[]}
          * @private
          * @since 3.0.0
          */
-        this.vertexViewF32 = null;
+        this.vertexViewF32 = [];
 
         /**
+         * An array of Uint32 Array objects, used by the WebGL renderer.
+         * 
+         * As of Phaser 3.14 this property is now an array, where each element maps to a Tileset instance. Previously it was a single instance.
+         * 
          * @name Phaser.Tilemaps.StaticTilemapLayer#vertexViewU32
-         * @type {Uint32Array}
+         * @type {Uint32Array[]}
          * @private
          * @since 3.0.0
          */
-        this.vertexViewU32 = null;
+        this.vertexViewU32 = [];
 
         /**
+         * An array of booleans, used by the WebGL renderer.
+         * 
+         * As of Phaser 3.14 this property is now an array, where each element maps to a Tileset instance. Previously it was a single boolean.
+         * 
          * @name Phaser.Tilemaps.StaticTilemapLayer#dirty
-         * @type {boolean}
+         * @type {boolean[]}
          * @private
          * @since 3.0.0
          */
-        this.dirty = true;
+        this.dirty = [];
 
         /**
+         * An array of integers, used by the WebGL renderer.
+         * 
+         * As of Phaser 3.14 this property is now an array, where each element maps to a Tileset instance. Previously it was a single integer.
+         * 
          * @name Phaser.Tilemaps.StaticTilemapLayer#vertexCount
-         * @type {integer}
+         * @type {integer[]}
          * @private
          * @since 3.0.0
          */
-        this.vertexCount = 0;
+        this.vertexCount = [];
 
+        /**
+         * The rendering (draw) order of the tiles in this layer.
+         * 
+         * The default is 0 which is 'right-down', meaning it will draw the tiles starting from the top-left,
+         * drawing to the right and then moving down to the next row.
+         * 
+         * The draw orders are:
+         * 
+         * 0 = right-down
+         * 1 = left-down
+         * 2 = right-up
+         * 3 = left-up
+         * 
+         * This can be changed via the `setRenderOrder` method.
+         *
+         * @name Phaser.Tilemaps.StaticTilemapLayer#_renderOrder
+         * @type {integer}
+         * @default 0
+         * @private
+         * @since 3.12.0
+         */
+        this._renderOrder = 0;
+
+        /**
+         * A temporary Transform Matrix, re-used internally during batching.
+         *
+         * @name Phaser.Tilemaps.StaticTilemapLayer#_tempMatrix
+         * @private
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @since 3.14.0
+         */
+        this._tempMatrix = new TransformMatrix();
+
+        /**
+         * An array holding the mapping between the tile indexes and the tileset they belong to.
+         *
+         * @name Phaser.Tilemaps.StaticTilemapLayer#gidMap
+         * @type {Phaser.Tilemaps.Tileset[]}
+         * @since 3.14.0
+         */
+        this.gidMap = [];
+
+        this.setTilesets(tileset);
         this.setAlpha(this.layer.alpha);
         this.setPosition(x, y);
         this.setOrigin();
         this.setSize(this.layer.tileWidth * this.layer.width, this.layer.tileHeight * this.layer.height);
+
+        this.updateVBOData();
 
         this.initPipeline('TextureTintPipeline');
 
@@ -289,10 +365,79 @@ var StaticTilemapLayer = new Class({
         {
             scene.sys.game.renderer.onContextRestored(function ()
             {
-                this.dirty = true;
-                this.vertexBuffer = null;
+                this.updateVBOData();
             }, this);
         }
+    },
+
+    /**
+     * Populates the internal `tileset` array with the Tileset references this Layer requires for rendering.
+     *
+     * @method Phaser.Tilemaps.StaticTilemapLayer#setTilesets
+     * @private
+     * @since 3.14.0
+     * 
+     * @param {(string|string[]|Phaser.Tilemaps.Tileset|Phaser.Tilemaps.Tileset[])} tileset - The tileset, or an array of tilesets, used to render this layer. Can be a string or a Tileset object.
+     */
+    setTilesets: function (tilesets)
+    {
+        var gidMap = [];
+        var setList = [];
+        var map = this.tilemap;
+
+        if (!Array.isArray(tilesets))
+        {
+            tilesets = [ tilesets ];
+        }
+
+        for (var i = 0; i < tilesets.length; i++)
+        {
+            var tileset = tilesets[i];
+
+            if (typeof tileset === 'string')
+            {
+                tileset = map.getTileset(tileset);
+            }
+
+            if (tileset)
+            {
+                setList.push(tileset);
+
+                var s = tileset.firstgid;
+
+                for (var t = 0; t < tileset.total; t++)
+                {
+                    gidMap[s + t] = tileset;
+                }
+            }
+        }
+
+        this.gidMap = gidMap;
+        this.tileset = setList;
+    },
+
+    /**
+     * Prepares the VBO data arrays for population by the `upload` method.
+     *
+     * @method Phaser.Tilemaps.StaticTilemapLayer#updateVBOData
+     * @private
+     * @since 3.14.0
+     *
+     * @return {this} This Tilemap Layer object.
+     */
+    updateVBOData: function ()
+    {
+        for (var i = 0; i < this.tileset.length; i++)
+        {
+            this.dirty[i] = true;
+            this.vertexCount[i] = 0;
+            this.vertexBuffer[i] = null;
+            this.bufferData[i] = null;
+            this.vertexViewF32[i] = null;
+            this.vertexViewU32[i] = null;
+        }
+
+        return this;
     },
 
     /**
@@ -302,19 +447,20 @@ var StaticTilemapLayer = new Class({
      * @since 3.0.0
      *
      * @param {Phaser.Cameras.Scene2D.Camera} camera - The camera to render to.
+     * @param {integer} tilesetIndex - The tileset index.
      *
      * @return {Phaser.Tilemaps.StaticTilemapLayer} This Tilemap Layer object.
      */
-    upload: function (camera)
+    upload: function (camera, tilesetIndex)
     {
         var renderer = this.renderer;
         var gl = renderer.gl;
 
         var pipeline = renderer.pipelines.TextureTintPipeline;
 
-        if (this.dirty)
+        if (this.dirty[tilesetIndex])
         {
-            var tileset = this.tileset;
+            var tileset = this.tileset[tilesetIndex];
             var mapWidth = this.layer.width;
             var mapHeight = this.layer.height;
             var width = tileset.image.source[0].width;
@@ -323,135 +469,111 @@ var StaticTilemapLayer = new Class({
             var tile;
             var row;
             var col;
-            var texCoords;
+            var renderOrder = this._renderOrder;
+            var minTileIndex = tileset.firstgid;
+            var maxTileIndex = tileset.firstgid + tileset.total;
     
-            var vertexBuffer = this.vertexBuffer;
-            var bufferData = this.bufferData;
+            var vertexBuffer = this.vertexBuffer[tilesetIndex];
+            var bufferData = this.bufferData[tilesetIndex];
             var vOffset = -1;
-            var vertexCount = 0;
-            var tintEffect = false;
             var bufferSize = (mapWidth * mapHeight) * pipeline.vertexSize * 6;
+
+            this.vertexCount[tilesetIndex] = 0;
     
             if (bufferData === null)
             {
                 bufferData = new ArrayBuffer(bufferSize);
-                this.bufferData = bufferData;
-                this.vertexViewF32 = new Float32Array(bufferData);
-                this.vertexViewU32 = new Uint32Array(bufferData);
+
+                this.bufferData[tilesetIndex] = bufferData;
+
+                this.vertexViewF32[tilesetIndex] = new Float32Array(bufferData);
+                this.vertexViewU32[tilesetIndex] = new Uint32Array(bufferData);
             }
     
-            var vertexViewF32 = this.vertexViewF32;
-            var vertexViewU32 = this.vertexViewU32;
-    
-            for (row = 0; row < mapHeight; row++)
+            if (renderOrder === 0)
             {
-                for (col = 0; col < mapWidth; col++)
+                //  right-down
+        
+                for (row = 0; row < mapHeight; row++)
                 {
-                    tile = mapData[row][col];
-    
-                    if (!tile || tile.index === -1 || !tile.visible)
+                    for (col = 0; col < mapWidth; col++)
                     {
-                        continue;
+                        tile = mapData[row][col];
+        
+                        if (!tile || tile.index < minTileIndex || tile.index > maxTileIndex || !tile.visible)
+                        {
+                            continue;
+                        }
+    
+                        vOffset = this.batchTile(vOffset, tile, tileset, width, height, camera, tilesetIndex);
                     }
-    
-                    var tx = tile.pixelX;
-                    var ty = tile.pixelY;
-                    var txw = tx + tile.width;
-                    var tyh = ty + tile.height;
-    
-                    texCoords = tileset.getTileTextureCoordinates(tile.index);
-    
-                    if (!texCoords)
-                    {
-                        continue;
-                    }
-    
-                    var u0 = texCoords.x / width;
-                    var v0 = texCoords.y / height;
-                    var u1 = (texCoords.x + tile.width) / width;
-                    var v1 = (texCoords.y + tile.height) / height;
-    
-                    var tint = Utils.getTintAppendFloatAlpha(0xffffff, camera.alpha * this.alpha * tile.alpha);
-    
-                    var tx0 = tx;
-                    var ty0 = ty;
-                    var tx1 = tx;
-                    var ty1 = tyh;
-                    var tx2 = txw;
-                    var ty2 = tyh;
-                    var tx3 = txw;
-                    var ty3 = ty;
-    
-                    if (camera.roundPixels)
-                    {
-                        tx0 |= 0;
-                        ty0 |= 0;
-            
-                        tx1 |= 0;
-                        ty1 |= 0;
-            
-                        tx2 |= 0;
-                        ty2 |= 0;
-            
-                        tx3 |= 0;
-                        ty3 |= 0;
-                    }
-            
-                    vertexViewF32[++vOffset] = tx0;
-                    vertexViewF32[++vOffset] = ty0;
-                    vertexViewF32[++vOffset] = u0;
-                    vertexViewF32[++vOffset] = v0;
-                    vertexViewF32[++vOffset] = tintEffect;
-                    vertexViewU32[++vOffset] = tint;
-    
-                    vertexViewF32[++vOffset] = tx1;
-                    vertexViewF32[++vOffset] = ty1;
-                    vertexViewF32[++vOffset] = u0;
-                    vertexViewF32[++vOffset] = v1;
-                    vertexViewF32[++vOffset] = tintEffect;
-                    vertexViewU32[++vOffset] = tint;
-    
-                    vertexViewF32[++vOffset] = tx2;
-                    vertexViewF32[++vOffset] = ty2;
-                    vertexViewF32[++vOffset] = u1;
-                    vertexViewF32[++vOffset] = v1;
-                    vertexViewF32[++vOffset] = tintEffect;
-                    vertexViewU32[++vOffset] = tint;
-    
-                    vertexViewF32[++vOffset] = tx0;
-                    vertexViewF32[++vOffset] = ty0;
-                    vertexViewF32[++vOffset] = u0;
-                    vertexViewF32[++vOffset] = v0;
-                    vertexViewF32[++vOffset] = tintEffect;
-                    vertexViewU32[++vOffset] = tint;
-    
-                    vertexViewF32[++vOffset] = tx2;
-                    vertexViewF32[++vOffset] = ty2;
-                    vertexViewF32[++vOffset] = u1;
-                    vertexViewF32[++vOffset] = v1;
-                    vertexViewF32[++vOffset] = tintEffect;
-                    vertexViewU32[++vOffset] = tint;
-    
-                    vertexViewF32[++vOffset] = tx3;
-                    vertexViewF32[++vOffset] = ty3;
-                    vertexViewF32[++vOffset] = u1;
-                    vertexViewF32[++vOffset] = v0;
-                    vertexViewF32[++vOffset] = tintEffect;
-                    vertexViewU32[++vOffset] = tint;
-    
-                    vertexCount += 6;
                 }
             }
-
-            this.dirty = false;
-
-            this.vertexCount = vertexCount;
+            else if (renderOrder === 1)
+            {
+                //  left-down
+        
+                for (row = 0; row < mapHeight; row++)
+                {
+                    for (col = mapWidth - 1; col >= 0; col--)
+                    {
+                        tile = mapData[row][col];
+        
+                        if (!tile || tile.index < minTileIndex || tile.index > maxTileIndex || !tile.visible)
+                        {
+                            continue;
+                        }
+    
+                        vOffset = this.batchTile(vOffset, tile, tileset, width, height, camera, tilesetIndex);
+                    }
+                }
+            }
+            else if (renderOrder === 2)
+            {
+                //  right-up
+        
+                for (row = mapHeight - 1; row >= 0; row--)
+                {
+                    for (col = 0; col < mapWidth; col++)
+                    {
+                        tile = mapData[row][col];
+        
+                        if (!tile || tile.index < minTileIndex || tile.index > maxTileIndex || !tile.visible)
+                        {
+                            continue;
+                        }
+    
+                        vOffset = this.batchTile(vOffset, tile, tileset, width, height, camera, tilesetIndex);
+                    }
+                }
+            }
+            else if (renderOrder === 3)
+            {
+                //  left-up
+        
+                for (row = mapHeight - 1; row >= 0; row--)
+                {
+                    for (col = mapWidth - 1; col >= 0; col--)
+                    {
+                        tile = mapData[row][col];
+        
+                        if (!tile || tile.index < minTileIndex || tile.index > maxTileIndex || !tile.visible)
+                        {
+                            continue;
+                        }
+    
+                        vOffset = this.batchTile(vOffset, tile, tileset, width, height, camera, tilesetIndex);
+                    }
+                }
+            }
+        
+            this.dirty[tilesetIndex] = false;
     
             if (vertexBuffer === null)
             {
                 vertexBuffer = renderer.createVertexBuffer(bufferData, gl.STATIC_DRAW);
     
-                this.vertexBuffer = vertexBuffer;
+                this.vertexBuffer[tilesetIndex] = vertexBuffer;
             }
             else
             {
@@ -461,10 +583,190 @@ var StaticTilemapLayer = new Class({
             }
         }
 
-        pipeline.modelIdentity();
-        pipeline.modelTranslate(this.x - (camera.scrollX * this.scrollFactorX), this.y - (camera.scrollY * this.scrollFactorY), 0);
-        pipeline.modelScale(this.scaleX, this.scaleY, 1);
-        pipeline.viewLoad2D(camera.matrix.matrix);
+        return this;
+    },
+
+    /**
+     * Add a single tile into the batch.
+     *
+     * @method Phaser.Tilemaps.StaticTilemapLayer#batchTile
+     * @private
+     * @since 3.12.0
+     *
+     * @param {integer} vOffset - The vertex offset.
+     * @param {any} tile - The tile being rendered.
+     * @param {any} tileset - The tileset being used for rendering.
+     * @param {integer} width - The width of the layer.
+     * @param {integer} height - The height of the layer.
+     * @param {Phaser.Cameras.Scene2D.Camera} camera - The camera the layer is being rendered with.
+     * @param {integer} tilesetIndex - The tileset index.
+     *
+     * @return {integer} The new vOffset value.
+     */
+    batchTile: function (vOffset, tile, tileset, width, height, camera, tilesetIndex)
+    {
+        var texCoords = tileset.getTileTextureCoordinates(tile.index);
+
+        if (!texCoords)
+        {
+            return vOffset;
+        }
+
+        var u0 = texCoords.x / width;
+        var v0 = texCoords.y / height;
+        var u1 = (texCoords.x + tile.width) / width;
+        var v1 = (texCoords.y + tile.height) / height;
+
+        var matrix = this._tempMatrix;
+
+        var tileWidth = tile.width;
+        var tileHeight = tile.height;
+
+        var halfTileWidth = tileWidth / 2;
+        var halfTileHeight = tileHeight / 2;
+
+        var x = -halfTileWidth;
+        var y = -halfTileHeight;
+
+        if (tile.flipX)
+        {
+            tileWidth *= -1;
+            x += tile.width;
+        }
+
+        if (tile.flipY)
+        {
+            tileHeight *= -1;
+            y += tile.height;
+        }
+
+        var xw = x + tileWidth;
+        var yh = y + tileHeight;
+
+        matrix.applyITRS(halfTileWidth + tile.pixelX, halfTileHeight + tile.pixelY, tile.rotation, 1, 1);
+
+        var tint = Utils.getTintAppendFloatAlpha(0xffffff, camera.alpha * this.alpha * tile.alpha);
+
+        var tx0 = matrix.getX(x, y);
+        var ty0 = matrix.getY(x, y);
+
+        var tx1 = matrix.getX(x, yh);
+        var ty1 = matrix.getY(x, yh);
+
+        var tx2 = matrix.getX(xw, yh);
+        var ty2 = matrix.getY(xw, yh);
+
+        var tx3 = matrix.getX(xw, y);
+        var ty3 = matrix.getY(xw, y);
+
+        if (camera.roundPixels)
+        {
+            tx0 |= 0;
+            ty0 |= 0;
+
+            tx1 |= 0;
+            ty1 |= 0;
+
+            tx2 |= 0;
+            ty2 |= 0;
+
+            tx3 |= 0;
+            ty3 |= 0;
+        }
+
+        var vertexViewF32 = this.vertexViewF32[tilesetIndex];
+        var vertexViewU32 = this.vertexViewU32[tilesetIndex];
+
+        vertexViewF32[++vOffset] = tx0;
+        vertexViewF32[++vOffset] = ty0;
+        vertexViewF32[++vOffset] = u0;
+        vertexViewF32[++vOffset] = v0;
+        vertexViewF32[++vOffset] = 0;
+        vertexViewU32[++vOffset] = tint;
+
+        vertexViewF32[++vOffset] = tx1;
+        vertexViewF32[++vOffset] = ty1;
+        vertexViewF32[++vOffset] = u0;
+        vertexViewF32[++vOffset] = v1;
+        vertexViewF32[++vOffset] = 0;
+        vertexViewU32[++vOffset] = tint;
+
+        vertexViewF32[++vOffset] = tx2;
+        vertexViewF32[++vOffset] = ty2;
+        vertexViewF32[++vOffset] = u1;
+        vertexViewF32[++vOffset] = v1;
+        vertexViewF32[++vOffset] = 0;
+        vertexViewU32[++vOffset] = tint;
+
+        vertexViewF32[++vOffset] = tx0;
+        vertexViewF32[++vOffset] = ty0;
+        vertexViewF32[++vOffset] = u0;
+        vertexViewF32[++vOffset] = v0;
+        vertexViewF32[++vOffset] = 0;
+        vertexViewU32[++vOffset] = tint;
+
+        vertexViewF32[++vOffset] = tx2;
+        vertexViewF32[++vOffset] = ty2;
+        vertexViewF32[++vOffset] = u1;
+        vertexViewF32[++vOffset] = v1;
+        vertexViewF32[++vOffset] = 0;
+        vertexViewU32[++vOffset] = tint;
+
+        vertexViewF32[++vOffset] = tx3;
+        vertexViewF32[++vOffset] = ty3;
+        vertexViewF32[++vOffset] = u1;
+        vertexViewF32[++vOffset] = v0;
+        vertexViewF32[++vOffset] = 0;
+        vertexViewU32[++vOffset] = tint;
+
+        this.vertexCount[tilesetIndex] += 6;
+
+        return vOffset;
+    },
+
+    /**
+     * Sets the rendering (draw) order of the tiles in this layer.
+     * 
+     * The default is 'right-down', meaning it will order the tiles starting from the top-left,
+     * drawing to the right and then moving down to the next row.
+     * 
+     * The draw orders are:
+     * 
+     * 0 = right-down
+     * 1 = left-down
+     * 2 = right-up
+     * 3 = left-up
+     * 
+     * Setting the render order does not change the tiles or how they are stored in the layer,
+     * it purely impacts the order in which they are rendered.
+     * 
+     * You can provide either an integer (0 to 3), or the string version of the order.
+     *
+     * @method Phaser.Tilemaps.StaticTilemapLayer#setRenderOrder
+     * @since 3.12.0
+     *
+     * @param {(integer|string)} renderOrder - The render (draw) order value. Either an integer between 0 and 3, or a string: 'right-down', 'left-down', 'right-up' or 'left-up'.
+     *
+     * @return {this} This Tilemap Layer object.
+     */
+    setRenderOrder: function (renderOrder)
+    {
+        var orders = [ 'right-down', 'left-down', 'right-up', 'left-up' ];
+
+        if (typeof renderOrder === 'string')
+        {
+            renderOrder = orders.indexOf(renderOrder);
+        }
+
+        if (renderOrder >= 0 && renderOrder < 4)
+        {
+            this._renderOrder = renderOrder;
+
+            for (var i = 0; i < this.tileset.length; i++)
+            {
+                this.dirty[i] = true;
+            }
+        }
 
         return this;
     },
@@ -1192,9 +1494,21 @@ var StaticTilemapLayer = new Class({
 
         this.tilemap = undefined;
         this.layer = undefined;
-        this.tileset = undefined;
         this.culledTiles.length = 0;
         this.cullCallback = null;
+
+        for (var i = 0; i < this.tileset.length; i++)
+        {
+            this.dirty[i] = true;
+            this.vertexCount[i] = 0;
+            this.vertexBuffer[i] = null;
+            this.bufferData[i] = null;
+            this.vertexViewF32[i] = null;
+            this.vertexViewU32[i] = null;
+        }
+
+        this.gidMap = [];
+        this.tileset = [];
 
         GameObject.prototype.destroy.call(this);
     }

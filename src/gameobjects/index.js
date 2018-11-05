@@ -23,7 +23,6 @@ var GameObjects = {
     BitmapText: require('./bitmaptext/static/BitmapText'),
     Blitter: require('./blitter/Blitter'),
     Container: require('./container/Container'),
-    DOMElement: require('./domelement/DOMElement'),
     DynamicBitmapText: require('./bitmaptext/dynamic/DynamicBitmapText'),
     Graphics: require('./graphics/Graphics.js'),
     Group: require('./group/Group'),
@@ -32,18 +31,31 @@ var GameObjects = {
     PathFollower: require('./pathfollower/PathFollower'),
     RenderTexture: require('./rendertexture/RenderTexture'),
     RetroFont: require('./bitmaptext/RetroFont'),
-    Sprite3D: require('./sprite3d/Sprite3D'),
     Sprite: require('./sprite/Sprite'),
     Text: require('./text/static/Text'),
     TileSprite: require('./tilesprite/TileSprite'),
     Zone: require('./zone/Zone'),
+
+    //  Shapes
+
+    Shape: require('./shape/Shape'),
+    Arc: require('./shape/arc/Arc'),
+    Curve: require('./shape/curve/Curve'),
+    Ellipse: require('./shape/ellipse/Ellipse'),
+    Grid: require('./shape/grid/Grid'),
+    IsoBox: require('./shape/isobox/IsoBox'),
+    IsoTriangle: require('./shape/isotriangle/IsoTriangle'),
+    Line: require('./shape/line/Line'),
+    Polygon: require('./shape/polygon/Polygon'),
+    Rectangle: require('./shape/rectangle/Rectangle'),
+    Star: require('./shape/star/Star'),
+    Triangle: require('./shape/triangle/Triangle'),
 
     //  Game Object Factories
 
     Factories: {
         Blitter: require('./blitter/BlitterFactory'),
         Container: require('./container/ContainerFactory'),
-        DOMElement: require('./domelement/DOMElementFactory'),
         DynamicBitmapText: require('./bitmaptext/dynamic/DynamicBitmapTextFactory'),
         Graphics: require('./graphics/GraphicsFactory'),
         Group: require('./group/GroupFactory'),
@@ -51,12 +63,24 @@ var GameObjects = {
         Particles: require('./particles/ParticleManagerFactory'),
         PathFollower: require('./pathfollower/PathFollowerFactory'),
         RenderTexture: require('./rendertexture/RenderTextureFactory'),
-        Sprite3D: require('./sprite3d/Sprite3DFactory'),
         Sprite: require('./sprite/SpriteFactory'),
         StaticBitmapText: require('./bitmaptext/static/BitmapTextFactory'),
         Text: require('./text/static/TextFactory'),
         TileSprite: require('./tilesprite/TileSpriteFactory'),
-        Zone: require('./zone/ZoneFactory')
+        Zone: require('./zone/ZoneFactory'),
+
+        //  Shapes
+        Arc: require('./shape/arc/ArcFactory'),
+        Curve: require('./shape/curve/CurveFactory'),
+        Ellipse: require('./shape/ellipse/EllipseFactory'),
+        Grid: require('./shape/grid/GridFactory'),
+        IsoBox: require('./shape/isobox/IsoBoxFactory'),
+        IsoTriangle: require('./shape/isotriangle/IsoTriangleFactory'),
+        Line: require('./shape/line/LineFactory'),
+        Polygon: require('./shape/polygon/PolygonFactory'),
+        Rectangle: require('./shape/rectangle/RectangleFactory'),
+        Star: require('./shape/star/StarFactory'),
+        Triangle: require('./shape/triangle/TriangleFactory')
     },
 
     Creators: {
@@ -68,7 +92,6 @@ var GameObjects = {
         Image: require('./image/ImageCreator'),
         Particles: require('./particles/ParticleManagerCreator'),
         RenderTexture: require('./rendertexture/RenderTextureCreator'),
-        Sprite3D: require('./sprite3d/Sprite3DCreator'),
         Sprite: require('./sprite/SpriteCreator'),
         StaticBitmapText: require('./bitmaptext/static/BitmapTextCreator'),
         Text: require('./text/static/TextCreator'),
@@ -77,6 +100,12 @@ var GameObjects = {
     }
 
 };
+
+if (typeof EXPERIMENTAL)
+{
+    GameObjects.DOMElement = require('./domelement/DOMElement');
+    GameObjects.Factories.DOMElement = require('./domelement/DOMElementFactory');
+}
 
 if (typeof WEBGL_RENDERER)
 {
